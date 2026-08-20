@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+storage.db
+.env
+node_modules/
+.next/
+.DS_Store
+seed_db.py
+seed_more.py
