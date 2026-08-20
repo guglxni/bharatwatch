@@ -1,12 +1,12 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
 
 class NauktrialertItem(BaseModel):
-    title: str | None = None
-    department: str | None = None
-    notification_date: str | None = None
-    last_application_date: str | None = None
-    exam_date: str | None = None
-    number_of_vacancies: int | None = None
-    qualification_required: str | None = None
-    and official_link: str | None = None
+    title: Optional[str] = None
+    department: Optional[str] = None
+    notification_date: Optional[str] = None
+    last_application_date: Optional[str] = None
+    exam_date: Optional[str] = None
+    number_of_vacancies: Optional[Any] = None
+    qualification_required: Optional[str] = None
+    official_link: Optional[str] = None

@@ -19,6 +19,18 @@ MODULE_KEY_FIELDS = {
     "startuppulse": ["title", "ministry"],
 }
 
+def flatten_value(v: Any) -> Any:
+    if isinstance(v, dict):
+        if "value" in v:
+            return v["value"]
+        # If it's a dict with one string value, return that
+        if len(v) == 1 and isinstance(list(v.values())[0], str):
+            return list(v.values())[0]
+    return v
+
+def flatten_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: flatten_value(v) for k, v in item.items()}
+
 def load_module_schema(module: str) -> type:
     try:
         mod = importlib.import_module(f"bharatwatch.modules.{module}.schema")
@@ -38,11 +50,16 @@ def trigger_collector(collector_id: str, url: str) -> Dict[str, Any]:
 
 def parse_output(data: Any) -> List[Dict[str, Any]]:
     if isinstance(data, list):
+        if len(data) == 1 and isinstance(data[0], dict):
+            # Find the first list inside the dict
+            for v in data[0].values():
+                if isinstance(v, list):
+                    return v
         return data
     if isinstance(data, dict):
-        for k in data:
-            if isinstance(data[k], list):
-                return data[k]
+        for k, v in data.items():
+            if isinstance(v, list):
+                return v
     return []
 
 def run_source(source: Source, db) -> Dict[str, Any]:
@@ -51,6 +68,7 @@ def run_source(source: Source, db) -> Dict[str, Any]:
     try:
         data = trigger_collector(source.collector_id, source.url)
         items = parse_output(data)
+        items = [flatten_item(item) for item in items]
         if items and schema:
             sample = schema.model_json_schema().get("properties", {})
             ok, valid = validate_items(items, sample)

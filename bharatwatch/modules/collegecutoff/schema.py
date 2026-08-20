@@ -1,10 +1,10 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
 
 class CollegecutoffItem(BaseModel):
-    institute: str | None = None
-    branch: str | None = None
-    opening_rank: int | None = None
-    closing_rank: int | None = None
-    round: str | None = None
-    and status: str | None = None
+    institute: Optional[str] = None
+    branch: Optional[str] = None
+    opening_rank: Optional[Any] = None
+    closing_rank: Optional[Any] = None
+    round: Optional[str] = None
+    status: Optional[str] = None

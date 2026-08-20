@@ -22,13 +22,13 @@ Built for the **WeMakeDevs × Bright Data "Into the Scrape-Verse"** hackathon, A
 
 BharatWatch collects publicly available Indian civic data across five verticals:
 
-| Module | Data Source | Status |
-|--------|-------------|--------|
-| **NaukriAlert** | Government job notifications (SSC, UPSC, IBPS) | Active collector + self-healing demo |
-| **TenderSentry** | Government tenders (eProcure/GEM) | Scaffolded + demo data |
-| **MandiWatch** | Agriculture mandi prices (Agmarknet/eNAM) | Scaffolded + demo data |
-| **CollegeCutoff** | JoSAA / state counselling cutoffs | Scaffolded + demo data |
-| **StartupPulse** | Startup India / MSME schemes | Scaffolded + demo data |
+| Module | Collector ID | Status |
+|--------|--------------|--------|
+| **NaukriAlert** | `c_mt1i84k91vu1mzbeso` | Pending (AI generation in progress) |
+| **TenderSentry** | `c_mt0uqsr9275nljkmec` | ✅ Healthy — verified run |
+| **MandiWatch** | `c_mt1h2pqy2fdtlurkwq` | ✅ Healthy — verified run |
+| **CollegeCutoff** | `c_mt1h6w0ukc2lut11g` | ✅ Healthy — verified run |
+| **StartupPulse** | `c_mt1hcxap876dyo54k` | ✅ Healthy — verified run |
 
 Each module has:
 - A Bright Data collector ID (custom, not a pre-built library scraper)

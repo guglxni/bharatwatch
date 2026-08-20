@@ -1,10 +1,10 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
 
 class StartuppulseItem(BaseModel):
-    title: str | None = None
-    ministry: str | None = None
-    scheme_type: str | None = None
-    deadline: str | None = None
-    summary: str | None = None
-    and link: str | None = None
+    title: Optional[str] = None
+    ministry: Optional[str] = None
+    scheme_type: Optional[str] = None
+    deadline: Optional[str] = None
+    summary: Optional[str] = None
+    link: Optional[str] = None
