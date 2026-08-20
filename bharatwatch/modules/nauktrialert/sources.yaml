@@ -1,9 +1,9 @@
 module: nauktrialert
-name: Nauktrialert
+name: NaukriAlert
 sources:
   - name: naukri-local
     url: https://alexandria-circles-chassis-hub.trycloudflare.com/naukri/
-    collector_id: c_mt1i84k91vu1mzbeso
-    status: pending
+    collector_id: demo-collector-naukri
+    status: demo
     prompt: |
-      Extract job notices from the page. Each notice is an article with class 'job-notice'. Return a flat JSON array with fields: title, department, notification_date, last_application_date, exam_date, number_of_vacancies, qualification_required, and official_link.
+      Extract all rows from the table with id 'notices'. Return a flat JSON array with fields: title, department, notification_date, last_application_date, exam_date, number_of_vacancies, qualification_required, and official_link.
