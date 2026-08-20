@@ -1,0 +1,28 @@
+# BharatWatch Cursor Rules
+
+## Project Context
+BharatWatch: self-healing local intelligence platform for Indian public data. Hackathon: WeMakeDevs × Bright Data, Aug 17–23, 2026.
+
+## Code Style
+- TypeScript: strict mode, functional components, explicit return types.
+- React: Next.js App Router, server components by default, client components only when needed.
+- Styling: Tailwind CSS, shadcn/ui base components.
+- State: TanStack Query for server state, React useState for local UI state.
+
+## File Structure
+- `dashboard/app/page.tsx` — overview
+- `dashboard/app/modules/<module>/page.tsx` — module view
+- `dashboard/components/` — shared components
+- `dashboard/lib/api.ts` — API client
+
+## Conventions
+- Use `cn()` helper from `class-variance-authority` + `clsx` + `tailwind-merge`.
+- Components are PascalCase. Files are kebab-case.
+- All API calls go through `lib/api.ts`.
+- No secrets in code. Use env vars.
+
+## Documentation
+Update `docs/DESIGN.html` and `docs/ARCHITECTURE.html` when UI or data flow changes.
+
+## Demo First
+Only build features that can be shown in a 5-minute demo video.

@@ -1,0 +1,29 @@
+module: nauktrialert
+name: NaukriAlert
+sources:
+  - name: ssc-local-mirror
+    url: https://frequency-mysterious-instrumentation-dylan.trycloudflare.com
+    collector_id: c_mt0srxto15g4to0is3
+    status: generating
+    prompt: |
+      Extract all recruitment notices from this page. For each notice card, return:
+      title, department, notification_date, last_application_date, exam_date,
+      number_of_vacancies, qualification_required, and official_link. Return as a JSON array.
+
+  - name: ssc-official
+    url: https://ssc.nic.in
+    collector_id: c_mt0rka4dabzawc1zq
+    status: generating
+    prompt: |
+      Extract all job notifications and recruitment notices from this page. For each item, return:
+      title, organization, notification_date, last_application_date, exam_date,
+      number_of_vacancies, qualification_required, and official_link. Return as a JSON array.
+
+  - name: upsc-official
+    url: https://upsc.gov.in
+    collector_id: TBD
+    status: pending
+    prompt: |
+      Extract all recruitment notices and examination notifications from this page. For each item, return:
+      title, organization, notification_date, last_application_date, exam_date,
+      number_of_vacancies, qualification_required, and official_link. Return as a JSON array.
