@@ -1,21 +1,9 @@
 module: nauktrialert
-name: NaukriAlert
+name: Nauktrialert
 sources:
-  - name: ssc-local-mirror
-    url: https://frequency-mysterious-instrumentation-dylan.trycloudflare.com
-    collector_id: c_mt0srxto15g4to0is3
-    status: healthy
-    prompt: |
-      Extract all recruitment notices from this single page only. Do NOT navigate to any links.
-      For each notice, return: title, department, notification_date, last_application_date,
-      exam_date, number_of_vacancies, qualification_required, and official_link.
-      Return as a flat JSON array.
-
-  - name: ssc-official
-    url: https://ssc.nic.in
-    collector_id: c_mt0rka4dabzawc1zq
+  - name: ssc-local
+    url: https://hood-travelers-mistakes-fountain.trycloudflare.com/naukri/
+    collector_id: TBD
     status: pending
     prompt: |
-      Extract all job notifications and recruitment notices from this page. For each item, return:
-      title, organization, notification_date, last_application_date, exam_date,
-      number_of_vacancies, qualification_required, and official_link. Return as a JSON array.
+      Extract all rows from the job notices table. For each row, return: title, department, notification_date, last_application_date, exam_date, number_of_vacancies, qualification_required, and official_link. Do not navigate any links. Return a flat JSON array.

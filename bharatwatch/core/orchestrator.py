@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import httpx
+import importlib
 from datetime import datetime
 from typing import List, Dict, Any
 from bharatwatch.core.config import BRIGHT_DATA_API_TOKEN, BRIGHT_DATA_COLLECTOR_BASE_URL
@@ -9,9 +10,24 @@ from bharatwatch.core.database import SessionLocal
 from bharatwatch.core.models import Source, Snapshot, Change, HealEvent
 from bharatwatch.core.diff_engine import compute_diff, compute_hash
 from bharatwatch.core.schema_registry import validate_items
-from bharatwatch.modules.nauktrialert.schema import NaukriAlertItem
 
-NAUKRI_KEY_FIELDS = ["title", "department"]
+MODULE_KEY_FIELDS = {
+    "nauktrialert": ["title", "department"],
+    "tendersentry": ["tender_id", "title"],
+    "mandiwatch": ["mandi", "crop", "variety"],
+    "collegecutoff": ["institute", "branch", "round"],
+    "startuppulse": ["title", "ministry"],
+}
+
+def load_module_schema(module: str) -> type:
+    try:
+        mod = importlib.import_module(f"bharatwatch.modules.{module}.schema")
+        for name in dir(mod):
+            if name.endswith("Item") and name != "BaseModel":
+                return getattr(mod, name)
+    except Exception as e:
+        print(f"Could not load schema for {module}: {e}")
+    return None
 
 def trigger_collector(collector_id: str, url: str) -> Dict[str, Any]:
     headers = {"Authorization": f"Bearer {BRIGHT_DATA_API_TOKEN}", "Content-Type": "application/json"}
@@ -20,23 +36,23 @@ def trigger_collector(collector_id: str, url: str) -> Dict[str, Any]:
     resp.raise_for_status()
     return resp.json()
 
-def parse_naukri_output(data: Any) -> List[Dict[str, Any]]:
+def parse_output(data: Any) -> List[Dict[str, Any]]:
     if isinstance(data, list):
         return data
     if isinstance(data, dict):
-        # common wrapper shapes
-        for k in ["recruitment_notices", "notices", "jobs", "results", "data"]:
-            if k in data and isinstance(data[k], list):
+        for k in data:
+            if isinstance(data[k], list):
                 return data[k]
     return []
 
 def run_source(source: Source, db) -> Dict[str, Any]:
     result = {"success": False, "items": [], "error": None}
+    schema = load_module_schema(source.module)
     try:
         data = trigger_collector(source.collector_id, source.url)
-        items = parse_naukri_output(data)
-        if items:
-            sample = NaukriAlertItem.model_json_schema().get("properties", {})
+        items = parse_output(data)
+        if items and schema:
+            sample = schema.model_json_schema().get("properties", {})
             ok, valid = validate_items(items, sample)
             if ok:
                 result["success"] = True
@@ -46,10 +62,10 @@ def run_source(source: Source, db) -> Dict[str, Any]:
                 db.add(snapshot)
                 db.commit()
 
-                # diff
                 last = db.query(Snapshot).filter_by(source_id=source.id).order_by(Snapshot.captured_at.desc()).offset(1).first()
                 if last:
-                    changes = compute_diff(last.raw_json, valid, NAUKRI_KEY_FIELDS)
+                    key_fields = MODULE_KEY_FIELDS.get(source.module, ["title"])
+                    changes = compute_diff(last.raw_json, valid, key_fields)
                     for c in changes:
                         db.add(Change(source_id=source.id, change_type=c["change_type"], before=c["before"], after=c["after"]))
                     db.commit()
@@ -58,8 +74,11 @@ def run_source(source: Source, db) -> Dict[str, Any]:
             else:
                 result["error"] = "schema validation failed"
                 source.health = "broken"
-        else:
+        elif not items:
             result["error"] = "empty output"
+            source.health = "broken"
+        else:
+            result["error"] = "no schema loaded"
             source.health = "broken"
     except Exception as e:
         result["error"] = str(e)
@@ -73,7 +92,7 @@ def run_all():
     try:
         sources = db.query(Source).all()
         for s in sources:
-            print(f"Running {s.name} ({s.collector_id})...")
+            print(f"Running {s.module}/{s.name} ({s.collector_id})...")
             res = run_source(s, db)
             print(f"  -> {res['success']}, items={len(res['items'])}, error={res.get('error')}")
     finally:

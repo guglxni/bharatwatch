@@ -1,0 +1,9 @@
+module: collegecutoff
+name: Collegecutoff
+sources:
+  - name: josaa-local
+    url: https://hood-travelers-mistakes-fountain.trycloudflare.com/cutoff/
+    collector_id: TBD
+    status: pending
+    prompt: |
+      Extract all rows from the cutoffs table. For each row, return: institute, branch, opening_rank, closing_rank, round, and status. Do not navigate any links. Return a flat JSON array.

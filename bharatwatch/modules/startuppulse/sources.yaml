@@ -1,0 +1,9 @@
+module: startuppulse
+name: Startuppulse
+sources:
+  - name: startupindia-local
+    url: https://hood-travelers-mistakes-fountain.trycloudflare.com/startup/
+    collector_id: TBD
+    status: pending
+    prompt: |
+      Extract all rows from the schemes table. For each row, return: title, ministry, scheme_type, deadline, summary, and link. Do not navigate any links. Return a flat JSON array.

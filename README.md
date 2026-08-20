@@ -1,57 +1,164 @@
-# BharatWatch 🇮🇳
+# BharatWatch
 
-**Self-Healing Local Intelligence Layer for India**
+Self-healing local intelligence for India.
 
-Built for the [WeMakeDevs × Bright Data](https://www.wemakedevs.org) "Into the Scrape-Verse" hackathon (Aug 17–23, 2026).
+Built for the **WeMakeDevs × Bright Data "Into the Scrape-Verse"** hackathon, August 17–23, 2026.
 
-## Problem
-Indian public data is fragmented across slow, frequently redesigned websites. Job seekers, students, farmers, MSMEs, and founders miss critical deadlines because monitoring 50+ portals manually is impossible.
+> **The problem:** Public data across Indian portals (jobs, tenders, mandi prices, college cutoffs, startup schemes) is scattered, changes layout without warning, and quietly breaks scrapers.
+> **The solution:** BharatWatch uses Bright Data Scraper Studio to build custom scrapers, monitors them for failures, and heals them with a single prompt when the target site changes — all exposed through a clean API and dashboard.
 
-## Solution
-BharatWatch uses [Bright Data Scraper Studio](https://brightdata.com) to build custom scrapers for Indian public sites, automatically heals them when layouts change, and presents structured updates in a unified dashboard.
+---
 
-## Modules
-- **NaukriAlert** — Government job notifications (SSC, UPSC, IBPS, etc.)
-- **TenderSentry** — Public tenders and corrigendums
-- **CollegeCutoff** — Engineering/medical counselling cutoffs
-- **StartupPulse** — Startup policies, schemes, and compliance updates
-- **MandiWatch** — Agricultural mandi prices
+## Tracks Entered
+
+- **Web-Slinger** (Best Use of Bright Data) — custom Scraper Studio collectors driving the entire pipeline
+- **Suit-Up** (Best UI) — Next.js dashboard with module navigation, change feeds, and health indicators
+- **Spider-Sense** (Cleanest Code) — modular Python backend, Pydantic schemas, diff engine, GitHub Actions CI
+- **Daily Bugle** — LinkedIn post about the build, tagging WeMakeDevs
+
+---
+
+## What It Does
+
+BharatWatch collects publicly available Indian civic data across five verticals:
+
+| Module | Data Source | Status |
+|--------|-------------|--------|
+| **NaukriAlert** | Government job notifications (SSC, UPSC, IBPS) | Active collector + self-healing demo |
+| **TenderSentry** | Government tenders (eProcure/GEM) | Scaffolded + demo data |
+| **MandiWatch** | Agriculture mandi prices (Agmarknet/eNAM) | Scaffolded + demo data |
+| **CollegeCutoff** | JoSAA / state counselling cutoffs | Scaffolded + demo data |
+| **StartupPulse** | Startup India / MSME schemes | Scaffolded + demo data |
+
+Each module has:
+- A Bright Data collector ID (custom, not a pre-built library scraper)
+- A Pydantic schema
+- A change-diff engine
+- A dashboard page
+
+---
 
 ## Tech Stack
-- Bright Data Scraper Studio (CLI + Collector IDs)
-- Python + FastAPI + SQLAlchemy + SQLite
-- Next.js + React + TypeScript + Tailwind CSS + shadcn/ui
-- GitHub Actions (cron + heal + notify)
+
+- **Bright Data Scraper Studio** — `@brightdata/cli` for `create`, `run`, and `heal`
+- **Python + FastAPI** — orchestration, diff engine, storage API
+- **SQLite** — lightweight snapshot + change tracking
+- **Next.js + Tailwind + shadcn/ui** — dashboard
+- **GitHub Actions** — scheduled scrapes and heal monitors
+
+---
 
 ## Quick Start
+
 ```bash
-# 1. Clone
-gh repo clone <your-github>/bharatwatch
+# 1. Clone the repo
+git clone https://github.com/guglxni/bharatwatch.git
 cd bharatwatch
 
-# 2. Backend
+# 2. Install Python dependencies
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Frontend
-cd dashboard
-pnpm install
-pnpm dev
+# 3. Set your Bright Data API token
+#    Get it from https://brightdata.com/cp/settings/api
+export BRIGHT_DATA_API_TOKEN="your_api_token"
+#    Optional: export BRIGHT_DATA_COLLECTOR_BASE_URL="https://api.brightdata.com/dca/trigger"
 
-# 4. Env
-cp .env.example .env
-# Edit .env with your Bright Data token
+# 4. Start the API server
+python -m bharatwatch.cli serve
+
+# 5. In another terminal, start the dashboard
+cd dashboard
+npm install
+npm run dev
+
+# 6. Open http://localhost:3000
 ```
 
-## Docs
-Open `docs/INDEX.html` in your browser for the full documentation suite.
+---
 
-## Self-Healing Demo
-1. Run `python -m bharatwatch.cli run-module nauktrialert`
-2. Change the local test HTML in `tests/fixtures/`
-3. Run `python -m bharatwatch.cli heal`
-4. Re-run and watch the dashboard update
+## Bright Data CLI Setup
+
+```bash
+# Login via device code (recommended for headless agents)
+npx @brightdata/cli login --device
+# Approve the code at https://brightdata.com/cp/device_approve
+
+# Verify your account
+npx @brightdata/cli budget
+```
+
+Use the promo code `wemakedevs` in the Bright Data billing section to get $50 in credits.
+
+---
+
+## Scraper Studio Workflow
+
+All commands are executed from the terminal via the Bright Data CLI.
+
+### 1. Create a custom scraper
+
+```bash
+npx @brightdata/cli scraper create "https://ssc.nic.in"   "Extract all government job notifications. For each item, return title, department, notification_date, last_application_date, exam_date, number_of_vacancies, qualification_required, and official_link. Return as a JSON array."
+```
+
+The command returns a collector ID: `c_mt0srxto15g4to0is3`.
+
+### 2. Run the scraper
+
+```bash
+npx @brightdata/cli scraper run c_mt0srxto15g4to0is3 "https://ssc.nic.in" --pretty
+```
+
+Returns clean, structured JSON.
+
+### 3. Self-heal when the site changes
+
+```bash
+npx @brightdata/cli scraper heal c_mt0srxto15g4to0is3   "The page layout changed. The notice cards are now article elements with class notice-card. The official_link is no longer in an anchor tag; it is now the text content of a div with class notice-link and data-url attribute. Do not navigate any links. Extract from the single page only."
+
+# Approve the generated fix
+npx @brightdata/cli scraper approve c_mt0srxto15g4to0is3
+
+# Re-run to verify data is recovered
+npx @brightdata/cli scraper run c_mt0srxto15g4to0is3 "https://ssc.nic.in" --pretty
+```
+
+The collector ID stays the same; downstream code and the dashboard never change.
+
+---
+
+## Project Structure
+
+```
+bharatwatch/
+├── bharatwatch/
+│   ├── api/            # FastAPI routes
+│   ├── cli/            # CLI commands (serve, run, heal, etc.)
+│   ├── core/           # config, database, models, diff engine, orchestrator
+│   └── modules/        # One module per civic vertical
+│       ├── nauktrialert/
+│       ├── tendersentry/
+│       ├── mandiwatch/
+│       ├── collegecutoff/
+│       └── startuppulse/
+├── dashboard/          # Next.js dashboard
+├── tests/              # Unit tests and local fixture sites
+├── .github/workflows/  # CI cron and heal monitor
+├── docs/               # HTML planning docs (PRD, architecture, etc.)
+├── CLAUDE.md           # Agent instructions for Claude Code
+└── .cursorrules        # Agent instructions for Cursor
+```
+
+---
+
+## AI Disclosure
+
+AI coding assistants (Claude, Cursor, Codex) were used to scaffold, document, and iterate on this project. All generated code was reviewed, tested, and refined by the human participant. The project architecture, module design, and demo narrative are original work created during the hackathon.
+
+---
 
 ## License
-MIT
+
+MIT © 2026 Aaryan Guglani

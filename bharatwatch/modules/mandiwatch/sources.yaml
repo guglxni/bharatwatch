@@ -1,0 +1,9 @@
+module: mandiwatch
+name: Mandiwatch
+sources:
+  - name: agmarknet-local
+    url: https://hood-travelers-mistakes-fountain.trycloudflare.com/mandi/
+    collector_id: TBD
+    status: pending
+    prompt: |
+      Extract all rows from the mandi prices table. For each row, return: state, district, mandi, crop, variety, min_price, max_price, modal_price, and date. Do not navigate any links. Return a flat JSON array.

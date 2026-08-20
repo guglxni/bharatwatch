@@ -1,20 +1,19 @@
 from typing import List, Dict, Any
-import json
 from pydantic import BaseModel, create_model
 
 def build_validator(schema: Dict[str, Any]) -> type[BaseModel]:
     fields = {}
     for key, value in schema.items():
         if isinstance(value, str):
-            fields[key] = (str, ...)
+            fields[key] = (str, None)
         elif isinstance(value, int):
-            fields[key] = (int, ...)
+            fields[key] = (int, None)
         elif isinstance(value, bool):
-            fields[key] = (bool, ...)
+            fields[key] = (bool, None)
         elif isinstance(value, float):
-            fields[key] = (float, ...)
+            fields[key] = (float, None)
         else:
-            fields[key] = (str, ...)
+            fields[key] = (str, None)
     return create_model("Item", **fields)
 
 def validate_items(items: List[Dict[str, Any]], sample: Dict[str, Any]) -> tuple[bool, List[Dict[str, Any]]]:

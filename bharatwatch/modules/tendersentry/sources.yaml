@@ -1,0 +1,9 @@
+module: tendersentry
+name: Tendersentry
+sources:
+  - name: eprocure-local
+    url: https://hood-travelers-mistakes-fountain.trycloudflare.com/tender/
+    collector_id: TBD
+    status: pending
+    prompt: |
+      Extract all rows from the tenders table. For each row, return: tender_id, title, department, estimated_value, closing_date, and document_link. Do not navigate any links. Return a flat JSON array.
