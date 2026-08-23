@@ -8,3 +8,10 @@ node_modules/
 .DS_Store
 seed_db.py
 seed_more.py
+
+# Video render artifacts (large binaries) — keep source, ignore outputs
+video/**/node_modules/
+video/**/*.mp4
+video/**/snapshots/
+video/**/dist/
+video/**/.hyperframes/
