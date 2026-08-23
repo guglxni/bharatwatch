@@ -4,6 +4,18 @@ Self-healing local intelligence for India.
 
 Built for the **WeMakeDevs × Bright Data "Into the Scrape-Verse"** hackathon, August 17–23, 2026.
 
+## 🌐 Live Demo
+
+| Surface | URL |
+|---|---|
+| **Dashboard (Vercel)** | https://bharatwatch-live.vercel.app |
+| **Landing page** | https://bharatwatch-live.vercel.app |
+| **API (Render)** | https://bharatwatch-api.onrender.com |
+| API health | https://bharatwatch-api.onrender.com/api/v1/health |
+| API overview | https://bharatwatch-api.onrender.com/api/v1/overview |
+
+**Stack:** Next.js 16 dashboard on **Vercel** · FastAPI + SQLite backend on **Render** · Bright Data Scraper Studio collectors.
+
 > **The problem:** Public data across Indian portals (jobs, tenders, mandi prices, college cutoffs, startup schemes) is scattered, changes layout without warning, and quietly breaks scrapers.
 > **The solution:** BharatWatch uses Bright Data Scraper Studio to build custom scrapers, monitors them for failures, and heals them with a single prompt when the target site changes — all exposed through a clean API and dashboard.
 
