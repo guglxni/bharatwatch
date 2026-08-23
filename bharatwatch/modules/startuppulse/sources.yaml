@@ -1,9 +1,5 @@
-module: startuppulse
-name: Startuppulse
-sources:
-  - name: startup-local
-    url: https://alexandria-circles-chassis-hub.trycloudflare.com/startup/
-    collector_id: c_mt1hcxap876dyo54k
-    status: healthy
-    prompt: |
-      Extract all rows from the schemes table. For each row, return: title, ministry, scheme_type, deadline, summary, and link. Do not navigate any links. Return a flat JSON array.
+name: startuppulse
+url: https://guglxni.github.io/bharatwatch/demo-sites/startup/
+collector_id: TBD
+status: pending
+prompt: Extract all rows from the schemes table. Return a flat JSON array with: title, ministry, scheme_type, deadline, summary, and link. Do not navigate any links.

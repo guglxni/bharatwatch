@@ -1,9 +1,5 @@
-module: tendersentry
-name: Tendersentry
-sources:
-  - name: tender-local
-    url: https://alexandria-circles-chassis-hub.trycloudflare.com/tender/
-    collector_id: c_mt0uqsr9275nljkmec
-    status: healthy
-    prompt: |
-      Extract all rows from the tenders table. For each row, return: tender_id, title, department, estimated_value, closing_date, and document_link. Do not navigate any links. Return a flat JSON array.
+name: tendersentry
+url: https://guglxni.github.io/bharatwatch/demo-sites/tender/
+collector_id: TBD
+status: pending
+prompt: Extract all rows from the tenders table. Return a flat JSON array with: tender_id, title, department, estimated_value, closing_date, and document_link. Do not navigate any links.

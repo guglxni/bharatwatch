@@ -1,9 +1,5 @@
-module: mandiwatch
-name: Mandiwatch
-sources:
-  - name: mandi-local
-    url: https://alexandria-circles-chassis-hub.trycloudflare.com/mandi/
-    collector_id: c_mt1h2pqy2fdtlurkwq
-    status: healthy
-    prompt: |
-      Extract all rows from the mandi prices table. For each row, return: state, district, mandi, crop, variety, min_price, max_price, modal_price, and date. Do not navigate any links. Return a flat JSON array.
+name: mandiwatch
+url: https://guglxni.github.io/bharatwatch/demo-sites/mandi/
+collector_id: TBD
+status: pending
+prompt: Extract all rows from the mandi prices table. Return a flat JSON array with: state, district, mandi, crop, variety, min_price, max_price, modal_price, and date. Do not navigate any links.

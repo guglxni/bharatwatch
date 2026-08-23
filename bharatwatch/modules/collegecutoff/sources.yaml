@@ -1,9 +1,5 @@
-module: collegecutoff
-name: Collegecutoff
-sources:
-  - name: cutoff-local
-    url: https://alexandria-circles-chassis-hub.trycloudflare.com/cutoff/
-    collector_id: c_mt1h6w0ukc2lut11g
-    status: healthy
-    prompt: |
-      Extract all rows from the cutoffs table. For each row, return: institute, branch, opening_rank, closing_rank, round, and status. Do not navigate any links. Return a flat JSON array.
+name: collegecutoff
+url: https://guglxni.github.io/bharatwatch/demo-sites/cutoff/
+collector_id: TBD
+status: pending
+prompt: Extract all rows from the cutoffs table. Return a flat JSON array with: institute, branch, opening_rank, closing_rank, round, and status. Do not navigate any links.

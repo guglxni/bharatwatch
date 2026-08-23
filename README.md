@@ -24,7 +24,7 @@ BharatWatch collects publicly available Indian civic data across five verticals:
 
 | Module | Collector ID | Status |
 |--------|--------------|--------|
-| **NaukriAlert** | `demo-collector-naukri` | Demo data (live SSC collector blocked by Bright Data policy) |
+| **NaukriAlert** | `c_mt5yz3z91f5nm13h9x` | ✅ Live — verified run extracts 5 job notices |
 | **TenderSentry** | `c_mt0uqsr9275nljkmec` | ✅ Healthy — verified run |
 | **MandiWatch** | `c_mt1h2pqy2fdtlurkwq` | ✅ Healthy — verified run |
 | **CollegeCutoff** | `c_mt1h6w0ukc2lut11g` | ✅ Healthy — verified run |
