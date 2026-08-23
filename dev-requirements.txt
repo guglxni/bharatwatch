@@ -1,0 +1,4 @@
+# Development dependencies — not installed on Render (server only needs requirements.txt)
+# Install locally with: pip install -r requirements.txt -r dev-requirements.txt
+playwright==1.49.1
+playwright-stealth==1.0.6
