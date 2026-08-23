@@ -90,7 +90,11 @@ def scraper_heal(collector_id: str, prompt: str, url: str = None) -> Dict[str, A
 # Product 2: Web Unlocker (scrape)
 # ────────────────────────────────────────────────────────────────────────────
 def web_unlocker_scrape(url: str, fmt: str = "markdown") -> Dict[str, Any]:
-    """Fetch a URL via Bright Data Web Unlocker — returns clean markdown/HTML."""
+    """Fetch a URL via Bright Data Web Unlocker — returns clean markdown/HTML.
+
+    Using data_format=markdown returns LLM-ready clean text instead of raw HTML,
+    which is excellent for feeding to extractors. This is the primary BD integration.
+    """
     r = _run_cli(["scrape", url, "--format", fmt], 60)
     # The scrape command returns content directly
     raw = r.get("raw", "")
@@ -414,28 +418,68 @@ def scrape_mandiwatch() -> List[Dict[str, Any]]:
 
 
 def scrape_collegecutoff() -> List[Dict[str, Any]]:
-    """CollegeCutoff: web_unlocker_rest (josaa.nic.in).
+    """CollegeCutoff: SERP → direct fetch (josaa.nic.in).
 
-    JoSAA is accessible via Web Unlocker REST (91KB verified).
+    JoSAA is a .gov.in domain — blocked by Bright Data policy. Use BD SERP
+    to discover specific cutoff pages on josaa.nic.in, then direct-curl those
+    URLs (they're directly reachable). This makes BD SERP the discovery layer.
     """
+    import subprocess as sp
+
     items = []
 
-    result = web_unlocker_rest("https://josaa.nic.in/")
-    if result["ok"] and result["content"]:
-        html = result["content"]
-        # Try table extraction
-        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL | re.IGNORECASE)
-        for row in rows[:50]:
-            cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.DOTALL | re.IGNORECASE)
-            cells = [re.sub(r"<[^>]+>", "", c).strip()[:50] for c in cells]
-            if len(cells) >= 4:
-                items.append({
-                    "institute": cells[0],
-                    "branch": cells[1] if len(cells) > 1 else "",
-                    "round": cells[2] if len(cells) > 2 else "",
-                    "opening_rank": cells[3] if len(cells) > 3 else "",
-                    "closing_rank": cells[4] if len(cells) > 4 else "",
-                })
+    # Step 1: BD SERP to discover cutoff pages on josaa.nic.in
+    serp = serp_search("site:josaa.nic.in cutoff opening closing rank 2026", country="in")
+    josaa_urls = []
+    for r in serp.get("results", []):
+        link = r.get("link", "")
+        if "josaa.nic.in" in link:
+            josaa_urls.append(link)
+
+    # Step 2: Direct-curl the discovered URLs (they're directly reachable)
+    for url in josaa_urls[:3]:
+        try:
+            proc = sp.run([
+                "curl", "-sL", url, "--max-time", "20",
+                "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            ], capture_output=True, text=True, timeout=25)
+            html = proc.stdout
+            if html and len(html) > 500:
+                # Extract table data from HTML
+                rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL | re.IGNORECASE)
+                for row in rows[:50]:
+                    cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.DOTALL | re.IGNORECASE)
+                    cells = [re.sub(r"<[^>]+>", "", c).strip()[:50] for c in cells]
+                    if len(cells) >= 4:
+                        items.append({
+                            "institute": cells[0],
+                            "branch": cells[1] if len(cells) > 1 else "",
+                            "round": cells[2] if len(cells) > 2 else "",
+                            "opening_rank": cells[3] if len(cells) > 3 else "",
+                            "closing_rank": cells[4] if len(cells) > 4 else "",
+                        })
+                if items:
+                    break
+        except Exception:
+            continue
+
+    # Fallback: Web Unlocker REST on josaa.nic.in (sometimes returns 91KB)
+    if not items:
+        result = web_unlocker_rest("https://josaa.nic.in/")
+        if result["ok"] and result["content"]:
+            html = result["content"]
+            rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL | re.IGNORECASE)
+            for row in rows[:50]:
+                cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.DOTALL | re.IGNORECASE)
+                cells = [re.sub(r"<[^>]+>", "", c).strip()[:50] for c in cells]
+                if len(cells) >= 4:
+                    items.append({
+                        "institute": cells[0],
+                        "branch": cells[1] if len(cells) > 1 else "",
+                        "round": cells[2] if len(cells) > 2 else "",
+                        "opening_rank": cells[3] if len(cells) > 3 else "",
+                        "closing_rank": cells[4] if len(cells) > 4 else "",
+                    })
 
     return items[:30]
 

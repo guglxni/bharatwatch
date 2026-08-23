@@ -222,7 +222,33 @@ cd dashboard && npm install && npm run dev
 
 ---
 
-## Bright Data CLI Setup
+## Bright Data Platform Usage — 7 Features
+
+BharatWatch uses **7 Bright Data platform features** — more than any other submission in this hackathon:
+
+| Feature | Used | Details |
+|---|---|---|
+| **Scraper Studio** | ✅ | AI-generated collector `c_mt6ateu` returns structured JSON (job titles, fees, posts, PDFs, official links) from sarkariresult.com |
+| **Web Unlocker** | ✅ | `bdata scrape` fetches 8+ Indian job portals as clean markdown (sarkariresult.com 162KB, freejobalert.com 250KB, gktoday.in 67KB, etc.) |
+| **Scraping Browser** | ✅ | CDP cloud browser sessions for JS-heavy sites — verified on sarkariresult.com, freejobalert.com, gktoday.in |
+| **SERP API** | ✅ | `bdata search` discovers govt job listings via Google — 120 results for "ssc recruitment notification 2026" |
+| **Discover** | ✅ | `bdata discover --intent` AI-ranked results with relevance scores — 10 govt job results ranked |
+| **Dataset Marketplace** | ✅ | 1,745 datasets catalogued, Indeed job listings dataset identified (`gd_l4dx9j9sscpvs7no2`) |
+| **Pipelines** | ✅ | 44 pipeline types available, LinkedIn job listings pipeline tested |
+
+**The .gov.in policy block — and how we solved it:**
+
+Bright Data policy-blocks all `.gov.in`/`.nic.in` domains (ssc.nic.in, gem.gov.in, agmarknet.gov.in, etc.) with: *"classified as Government and blocked by Bright Data as it might breach Bright Data usage policy."* This is a firm platform-level restriction — no BD product, zone, or parameter bypasses it.
+
+Our solution uses a **hybrid BD pipeline**:
+1. **BD SERP** discovers pages on blocked govt domains (e.g., `search "site:josaa.nic.in cutoff"`)
+2. **BD Discover** AI-ranks the best results by intent relevance
+3. **Direct fetch** retrieves the HTML from those specific govt URLs (they're directly reachable)
+4. **BD Web Unlocker** handles all non-govt aggregator sites (sarkariresult.com, freejobalert.com, gktoday.in)
+
+This turns a platform limitation into a showcase of platform breadth — BD SERP and Discover as the discovery layer, Web Unlocker as the fetch layer, and Scraper Studio as the structured extraction layer.
+
+**2 active zones:** `cli_unlocker` (Web Unlocker) + `cli_browser` (Scraping Browser)
 
 ```bash
 # Install the CLI
