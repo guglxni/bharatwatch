@@ -62,7 +62,7 @@ def parse_output(data: Any) -> List[Dict[str, Any]]:
                 return v
     return []
 
-def run_source(source: Source, db) -> Dict[str, Any]:
+def run_source(source: Source, db, auto_heal: bool = True) -> Dict[str, Any]:
     result = {"success": False, "items": [], "error": None}
     schema = load_module_schema(source.module)
     try:
@@ -103,6 +103,19 @@ def run_source(source: Source, db) -> Dict[str, Any]:
         source.health = "broken"
     source.last_run_at = datetime.utcnow()
     db.commit()
+
+    # Closed loop: a broken run triggers an immediate self-heal attempt.
+    if not result["success"] and auto_heal:
+        try:
+            from bharatwatch.core.healer import heal_source_with_retries
+            heal = heal_source_with_retries(source.id)
+            result["heal"] = heal
+            if heal.get("success"):
+                source.health = "healthy"
+                db.commit()
+                result["recovered"] = True
+        except Exception as he:  # healing must never crash the run
+            result["heal_error"] = str(he)
     return result
 
 def run_all():
