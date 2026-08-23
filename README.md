@@ -1,6 +1,6 @@
 # BharatWatch
 
-Self-healing local intelligence for India.
+**Self-healing intelligence for India's public data.**
 
 Built for the **WeMakeDevs × Bright Data "Into the Scrape-Verse"** hackathon, August 17–23, 2026.
 
@@ -8,43 +8,150 @@ Built for the **WeMakeDevs × Bright Data "Into the Scrape-Verse"** hackathon, A
 
 | Surface | URL |
 |---|---|
-| **Dashboard (Vercel)** | https://bharatwatch-live.vercel.app |
-| **Landing page** | https://bharatwatch-live.vercel.app |
+| **Dashboard + Landing** | https://bharatwatch-live.vercel.app |
 | **API (Render)** | https://bharatwatch-api.onrender.com |
 | API health | https://bharatwatch-api.onrender.com/api/v1/health |
 | API overview | https://bharatwatch-api.onrender.com/api/v1/overview |
 | **Source code** | https://github.com/guglxni/bharatwatch |
+| **Demo video** | `video/bharatwatch-demo/` (2m 22s, captions + voiceover) |
 
-**Stack:** Next.js 16 dashboard on **Vercel** · FastAPI + SQLite backend on **Render** · Bright Data Scraper Studio collectors.
+**Stack:** Next.js 16 on **Vercel** · FastAPI + SQLite on **Render** · Bright Data Scraper Studio + Web Unlocker + Playwright Stealth.
 
-> **The problem:** Public data across Indian portals (jobs, tenders, mandi prices, college cutoffs, startup schemes) is scattered, changes layout without warning, and quietly breaks scrapers.
-> **The solution:** BharatWatch uses Bright Data Scraper Studio to build custom scrapers, monitors them for failures, and heals them with a single prompt when the target site changes — all exposed through a clean API and dashboard.
+---
+
+## The Problem
+
+Public data across Indian portals — jobs, tenders, mandi prices, college cutoffs, startup schemes — is scattered across dozens of sites, changes layout without warning, and quietly breaks scrapers. Every time a portal redesigns, someone has to manually rewrite the extraction code.
+
+## The Solution
+
+BharatWatch uses **Bright Data's platform end-to-end** to build custom scrapers, monitor them for failures, and **heal them automatically** when the target site changes — all exposed through a clean API and real-time dashboard.
+
+---
 
 ## How It Scrapes Real Data
 
-BharatWatch uses a **dual-source scraping architecture**:
+BharatWatch uses a **three-layer scraping architecture** that maximizes Bright Data platform usage while ensuring reliability:
 
-1. **Bright Data Scraper Studio** (primary) — 5 custom AI-generated collectors (`scraper create`) running through Bright Data's proxy network with `scraper run` and self-healing via `scraper heal --auto-approve --auto-save`
-2. **Playwright + Stealth fallback** — when Bright Data's proxy returns 403 ("tunneling socket") or the domain isn't on the account allowlist, the orchestrator automatically falls back to a stealthed headless Chromium browser with site-specific CSS extractors
+### Layer 1: Bright Data Scraper Studio (Primary)
 
-| Module | Primary Source | Fallback Source | Live Data |
-|---|---|---|---|
-| NaukriAlert | Bright Data collector `c_mt68v...` (Indeed.com) | sarkariresult.com (Playwright) | ✅ 30 real govt job listings |
-| TenderSentry | Bright Data collector `c_mt0uq...` | — (seeded) | 📋 Tender data |
-| MandiWatch | Bright Data collector `c_mt1h2...` | — (seeded) | 🌾 Mandi prices |
-| CollegeCutoff | Bright Data collector `c_mt1h6...` | — (seeded) | 🎓 Cutoff ranks |
-| StartupPulse | Bright Data collector `c_mt1hc...` | gktoday.in (Playwright) | ✅ 20 real current affairs |
+Custom AI-generated collectors built with `@brightdata/cli scraper create`. The CLI sends a natural-language description to Bright Data's AI, which generates extraction code, discovers page structure, and returns a ready-to-use collector.
 
-The orchestrator tries Bright Data first, and if it fails (403, timeout, empty output), it transparently falls back to the Playwright scraper — **the dashboard and API never know the difference**.
+```bash
+# Create a collector — AI writes the extraction code
+npx @brightdata/cli scraper create "https://www.indeed.com/jobs?q=government&l=India" \
+  "Extract all job listings: title, company, location, salary, posted_date, apply_link"
+
+# Run it — returns structured JSON
+npx @brightdata/cli scraper run c_mt68v2iy2ox6e40ddp "https://www.indeed.com/jobs?q=government&l=India"
+```
+
+### Layer 2: Bright Data Web Unlocker Direct API (Bypass)
+
+When Scraper Studio's proxy returns 403 ("tunneling socket could not be established"), the orchestrator falls back to the **Web Unlocker Direct API** — a REST call that bypasses the proxy tunnel entirely:
+
+```python
+# Pure REST call — no proxy tunnel, 98% success rate
+response = requests.post("https://api.brightdata.com/request", headers={
+    "Authorization": f"Bearer {api_key}"
+}, json={"zone": "cli_unlocker", "url": target_url, "format": "raw"})
+html = response.text  # clean HTML from target site
+```
+
+### Layer 3: Playwright + Stealth (Hard Fallback)
+
+For domains where both Scraper Studio and Web Unlocker fail, a stealthed headless Chromium browser with site-specific CSS extractors provides the final fallback:
+
+- `sarkariresult.com` — 30 real govt job listings extracted
+- `freejobalert.com` — govt job alerts
+- `gktoday.in` — current affairs and scheme data
+
+The orchestrator tries each layer in sequence. **The dashboard and API never know which layer succeeded** — they just see structured data.
+
+### Data Sources
+
+| Module | Bright Data Collector | Target Site | Fallback | Status |
+|---|---|---|---|---|
+| **NaukriAlert** | `c_mt68v2iy2ox6e40ddp` (AI-generated) | Indeed.com (gov jobs India) | sarkariresult.com (Playwright) | ✅ 30 real listings |
+| **TenderSentry** | `c_mt0uqsr9275nljkmec` | GeM + CPPP e-procurement | — (seeded) | 📋 Live collector |
+| **MandiWatch** | `c_mt1h2pqy2fdtlurkwq` | Agmarknet price boards | — (seeded) | 🌾 Live collector |
+| **CollegeCutoff** | `c_mt1h6w0ukc2lut11g` | JoSAA counselling boards | — (seeded) | 🎓 Live collector |
+| **StartupPulse** | `c_mt1hcxap876dyo54k` | GKToday + Startup India | gktoday.in (Playwright) | ✅ 20 real items |
+
+---
+
+## Closed-Loop Self-Healing
+
+The standout feature: **when a site changes layout, the scraper heals itself.** No manual intervention.
+
+### How it works
+
+```
+Site changes layout
+    ↓
+Collector run fails (empty output / schema mismatch)
+    ↓
+Orchestrator detects breakage
+    ↓
+Builds context-aware heal prompt (from last good snapshot)
+    ↓
+scraper heal --auto-approve --auto-save (AI regenerates extraction code)
+    ↓
+Re-runs collector to verify real data returned
+    ↓
+Marks source healthy ✓  (or retries 3× with refined prompts, then escalates)
+```
+
+### CLI commands
+
+```bash
+# Heal every broken source right now (closed-loop)
+python -m bharatwatch.cli heal_monitor
+
+# Heal one source by id, with retries
+python -m bharatwatch.cli heal 1
+
+# Always-on self-healing daemon: sweep + auto-heal every 5 min
+python -m bharatwatch.cli watch --interval 300
+```
+
+Under the hood:
+
+```bash
+npx @brightdata/cli scraper heal c_mt68v2iy2ox6e40ddp "The page layout changed..." \
+  --auto-approve --auto-save --json
+```
+
+The collector ID stays the same; downstream code, the API, and the dashboard never change.
 
 ---
 
 ## Tracks Entered
 
-- **Web-Slinger** (Best Use of Bright Data) — custom Scraper Studio collectors driving the entire pipeline
-- **Suit-Up** (Best UI) — Next.js dashboard with module navigation, change feeds, and health indicators
-- **Spider-Sense** (Cleanest Code) — modular Python backend, Pydantic schemas, diff engine, GitHub Actions CI
-- **Daily Bugle** — LinkedIn post about the build, tagging WeMakeDevs
+### 🕸️ Web-Slinger (Best Use of Bright Data)
+- 5 custom AI-generated Scraper Studio collectors
+- `scraper create` → `scraper run` → `scraper heal --auto-approve --auto-save` full lifecycle
+- Web Unlocker Direct API as a second Bright Data layer
+- Context-aware heal prompts built from snapshot history
+- Post-heal validation (re-run + verify real data)
+- `watch` daemon for always-on monitoring
+
+### 🎨 Suit-Up (Best UI)
+- Live dashboard on Vercel: https://bharatwatch-live.vercel.app
+- Dark-native design system with indigo/violet gradients
+- KPI cards with sparklines, activity charts, change composition donut
+- Per-module pages with data tables and history timelines
+- Self-healing event feed with timestamps and success badges
+- Responsive, GPU-compositor-safe animations (no green-flash glitches)
+
+### 🧹 Spider-Sense (Cleanest Code)
+- Modular Python backend: `core/`, `api/`, `cli/`, `modules/` packages
+- 17 unit tests (healer, diff engine, direct scraper) — all passing
+- Pydantic schemas per module for type-safe data validation
+- Diff engine with field-level change detection (created/updated/deleted)
+- Separated `requirements.txt` (server) from `dev-requirements.txt` (Playwright)
+- `render.yaml` infrastructure-as-code blueprint
+- Type-hinted orchestrator with graceful fallback chain
 
 ---
 
@@ -52,59 +159,62 @@ The orchestrator tries Bright Data first, and if it fails (403, timeout, empty o
 
 BharatWatch collects publicly available Indian civic data across five verticals:
 
-| Module | Collector ID | Status |
-|--------|--------------|--------|
-| **NaukriAlert** | `c_mt5yz3z91f5nm13h9x` | ✅ Live — verified run extracts 5 job notices |
-| **TenderSentry** | `c_mt0uqsr9275nljkmec` | ✅ Healthy — verified run |
-| **MandiWatch** | `c_mt1h2pqy2fdtlurkwq` | ✅ Healthy — verified run |
-| **CollegeCutoff** | `c_mt1h6w0ukc2lut11g` | ✅ Healthy — verified run |
-| **StartupPulse** | `c_mt1hcxap876dyo54k` | ✅ Healthy — verified run |
+| Module | What it tracks | Key fields |
+|---|---|---|
+| **NaukriAlert** 🔔 | Govt job notifications | title, department, vacancies, dates, qualification |
+| **TenderSentry** 📄 | Government tenders | tender_id, title, department, value, closing_date |
+| **MandiWatch** 🌾 | Agricultural market prices | mandi, crop, variety, min/max/modal price |
+| **CollegeCutoff** 🎓 | Engineering college cutoffs | institute, branch, round, opening/closing rank |
+| **StartupPulse** 🚀 | Startup schemes & grants | title, ministry, description, link |
 
 Each module has:
-- A Bright Data collector ID (custom, not a pre-built library scraper)
-- A Pydantic schema
-- A change-diff engine
-- A dashboard page
+- A Bright Data collector ID (custom, AI-generated — not a pre-built library scraper)
+- A Pydantic schema for type-safe validation
+- A change-diff engine (field-level created/updated/deleted detection)
+- A dashboard page with live data, history, and health indicators
 
 ---
 
 ## Tech Stack
 
-- **Bright Data Scraper Studio** — `@brightdata/cli` for `create`, `run`, and `heal`
-- **Playwright + Stealth** — fallback scraper for domains where Bright Data's proxy returns 403 or the domain isn't on the account allowlist; site-specific extractors for sarkariresult.com, freejobalert.com, gktoday.in
-- **Python + FastAPI** — orchestration, diff engine, storage API
-- **SQLite** — lightweight snapshot + change tracking
-- **Next.js + Tailwind + shadcn/ui** — dashboard
-- **GitHub Actions** — scheduled scrapes and heal monitors
+| Layer | Technology |
+|---|---|
+| **Scraping** | Bright Data Scraper Studio (`@brightdata/cli`), Web Unlocker API, Playwright + Stealth |
+| **Backend** | Python 3.12, FastAPI, SQLAlchemy, SQLite |
+| **Frontend** | Next.js 16, TypeScript, Tailwind CSS, shadcn/ui |
+| **Deployment** | Vercel (dashboard), Render (API), GitHub Actions (CI) |
+| **Testing** | pytest (17 tests) |
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Clone the repo
+# 1. Clone
 git clone https://github.com/guglxni/bharatwatch.git
 cd bharatwatch
 
-# 2. Install Python dependencies
-python3 -m venv .venv
-source .venv/bin/activate
+# 2. Install Python deps
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Set your Bright Data API token
-#    Get it from https://brightdata.com/cp/settings/api
-export BRIGHT_DATA_API_TOKEN="your_api_token"
-#    Optional: export BRIGHT_DATA_COLLECTOR_BASE_URL="https://api.brightdata.com/dca/trigger"
+# 3. (Optional) Install Playwright for direct scraping fallback
+pip install -r dev-requirements.txt
+python -m playwright install chromium
 
-# 4. Start the API server
+# 4. Set your Bright Data API token
+export BRIGHT_DATA_API_TOKEN="your_api_token"
+
+# 5. Seed the database with demo data
+python seed_rich_data.py
+
+# 6. Start the API server
 python -m bharatwatch.cli serve
 
-# 5. In another terminal, start the dashboard
-cd dashboard
-npm install
-npm run dev
+# 7. In another terminal, start the dashboard
+cd dashboard && npm install && npm run dev
 
-# 6. Open http://localhost:3000
+# 8. Open http://localhost:3000
 ```
 
 ---
@@ -112,67 +222,64 @@ npm run dev
 ## Bright Data CLI Setup
 
 ```bash
-# Login via device code (recommended for headless agents)
+# Install the CLI
+npx @brightdata/cli --version
+
+# Login via device code
 npx @brightdata/cli login --device
 # Approve the code at https://brightdata.com/cp/device_approve
 
 # Verify your account
 npx @brightdata/cli budget
-```
 
-Use the promo code `wemakedevs` in the Bright Data billing section to get $50 in credits.
+# Use promo code `wemakedevs` for $50 in credits
+```
 
 ---
 
 ## Scraper Studio Workflow
 
-All commands are executed from the terminal via the Bright Data CLI.
-
 ### 1. Create a custom scraper
 
 ```bash
-npx @brightdata/cli scraper create "https://ssc.nic.in"   "Extract all government job notifications. For each item, return title, department, notification_date, last_application_date, exam_date, number_of_vacancies, qualification_required, and official_link. Return as a JSON array."
+npx @brightdata/cli scraper create "https://www.indeed.com/jobs?q=government&l=India" \
+  "Extract all job listings. For each: title, company, location, salary, posted_date, apply_link"
 ```
 
-The command returns a collector ID: `c_mt0srxto15g4to0is3`.
+Returns a collector ID (e.g., `c_mt68v2iy2ox6e40ddp`).
 
 ### 2. Run the scraper
 
 ```bash
-npx @brightdata/cli scraper run c_mt0srxto15g4to0is3 "https://ssc.nic.in" --pretty
+npx @brightdata/cli scraper run c_mt68v2iy2ox6e40ddp "https://www.indeed.com/jobs?q=government&l=India" --json
 ```
 
-Returns clean, structured JSON.
+Returns structured JSON.
 
-### 3. Self-heal when the site changes (closed-loop)
-
-BharatWatch heals automatically — no manual approve step. When a run fails, the orchestrator immediately triggers the heal loop:
-
-1. **Detect** breakage (empty output / schema validation failure / request error)
-2. **Build a context-aware prompt** from the last *good* snapshot (expected field list + previous failure)
-3. **Heal** with `--auto-approve --auto-save` (the AI fix is applied and saved in one shot)
-4. **Re-run** the collector and **validate** that real data came back
-5. Mark the source **healthy** only if data is recovered — otherwise retry up to 3× with refined prompts, then **escalate** for human review
+### 3. Self-heal when the site changes
 
 ```bash
-# Heal every broken source right now (closed-loop)
-.venv/bin/python -m bharatwatch.cli heal_monitor
+# Automatic closed-loop heal
+python -m bharatwatch.cli heal_monitor
 
-# Heal one source by id, with retries
-.venv/bin/python -m bharatwatch.cli heal 1
-
-# Always-on self-healing daemon: sweep + auto-heal every 5 min
-.venv/bin/python -m bharatwatch.cli watch --interval 300
-```
-
-Under the hood it's the Bright Data CLI:
-
-```bash
-npx @brightdata/cli scraper heal c_mt0srxto15g4to0is3 "The page layout changed..." \
+# Or trigger manually
+npx @brightdata/cli scraper heal c_mt68v2iy2ox6e40ddp "Layout changed, re-extract fields" \
   --auto-approve --auto-save --json
 ```
 
-The collector ID stays the same; downstream code and the dashboard never change.
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/v1/health` | GET | Health check (sources, healthy count) |
+| `/api/v1/overview` | GET | Aggregate stats for dashboard |
+| `/api/v1/modules` | GET | All 5 modules with health, item count, changes |
+| `/api/v1/{module}/data` | GET | Latest scraped data for a module |
+| `/api/v1/{module}/history` | GET | 7-day snapshot history + changes |
+| `/api/v1/heal-events` | GET | Self-healing event log |
+| `/api/v1/changes` | GET | All detected changes across modules |
 
 ---
 
@@ -181,28 +288,78 @@ The collector ID stays the same; downstream code and the dashboard never change.
 ```
 bharatwatch/
 ├── bharatwatch/
-│   ├── api/            # FastAPI routes
-│   ├── cli/            # CLI commands (serve, run, heal, etc.)
-│   ├── core/           # config, database, models, diff engine, orchestrator
-│   └── modules/        # One module per civic vertical
+│   ├── api/               # FastAPI routes (health, overview, modules, data)
+│   ├── cli/               # CLI commands (serve, run_all, heal, watch)
+│   ├── core/
+│   │   ├── config.py      # Bright Data API token, DB URL
+│   │   ├── database.py    # SQLAlchemy session management
+│   │   ├── models.py      # Source, Snapshot, Change, HealEvent models
+│   │   ├── orchestrator.py # 3-layer scraping: BD → Unlocker → Playwright
+│   │   ├── healer.py      # Closed-loop self-healing engine
+│   │   ├── diff_engine.py # Field-level change detection
+│   │   ├── schema_registry.py # Pydantic validation
+│   │   ├── direct_scraper.py  # Playwright + Web Unlocker fallback
+│   │   └── site_extractors.py # Site-specific CSS extractors
+│   └── modules/           # One package per civic vertical
 │       ├── nauktrialert/
 │       ├── tendersentry/
 │       ├── mandiwatch/
 │       ├── collegecutoff/
 │       └── startuppulse/
-├── dashboard/          # Next.js dashboard
-├── tests/              # Unit tests and local fixture sites
-├── .github/workflows/  # CI cron and heal monitor
-├── docs/               # HTML planning docs (PRD, architecture, etc.)
-├── CLAUDE.md           # Agent instructions for Claude Code
-└── .cursorrules        # Agent instructions for Cursor
+├── dashboard/             # Next.js 16 dashboard (Vercel)
+├── tests/                 # 17 unit tests (healer, diff, scraper)
+├── .github/workflows/     # CI cron and heal monitor
+├── video/                 # Demo video project (composition, captions, thumbnail)
+├── render.yaml            # Render deployment blueprint (IaC)
+├── seed_rich_data.py      # Demo data seeder (idempotent)
+├── requirements.txt       # Server dependencies
+├── dev-requirements.txt   # Dev dependencies (Playwright)
+├── CLAUDE.md              # Agent instructions
+└── .cursorrules           # Cursor instructions
 ```
+
+---
+
+## Deployment
+
+### Backend (Render)
+
+The `render.yaml` blueprint provisions a free-tier Python web service:
+- Auto-deploys on every push to `main`
+- Seeds the DB on startup via `render_start.sh`
+- Health check at `/api/v1/health`
+
+```bash
+# Manual deploy trigger
+curl -X POST "https://api.render.com/v1/services/{srv_id}/deploys" \
+  -H "Authorization: Bearer {render_api_key}"
+```
+
+### Frontend (Vercel)
+
+```bash
+cd dashboard
+vercel --prod
+```
+
+The dashboard proxies `/api/*` to the Render backend via `next.config.ts` rewrites.
+
+---
+
+## Demo Video
+
+A 2m 22s demo video with burned-in captions and background music is included in `video/bharatwatch-demo/`:
+
+- **Voiceover**: ElevenLabs Sarah (female, mature, confident)
+- **Captions**: Whisper word-level timestamps, 54 lower-third lines
+- **BGM**: Synthesized ambient underscore with voiceover carve (sidechain ducking)
+- **Thumbnail**: Custom-designed `BharatWatch-Thumbnail.png` (1920×1080)
 
 ---
 
 ## AI Disclosure
 
-AI coding assistants (Claude, Cursor, Codex) were used to scaffold, document, and iterate on this project. All generated code was reviewed, tested, and refined by the human participant. The project architecture, module design, and demo narrative are original work created during the hackathon.
+AI coding assistants (Claude, Cursor, Codex, Hermes Agent) were used to scaffold, document, and iterate on this project. All generated code was reviewed, tested, and refined by the human participant. The project architecture, module design, and demo narrative are original work created during the hackathon.
 
 ---
 
