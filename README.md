@@ -72,11 +72,11 @@ The orchestrator tries each layer in sequence. **The dashboard and API never kno
 
 | Module | Bright Data Collector | Target Site | Fallback | Status |
 |---|---|---|---|---|
-| **NaukriAlert** | `c_mt68v2iy2ox6e40ddp` (AI-generated) | Indeed.com (gov jobs India) | sarkariresult.com (Playwright) | ✅ 30 real listings |
+| **NaukriAlert** | `c_mt68v2iy2ox6e40ddp` (AI-generated) | Indeed.com (gov jobs India) | sarkariresult.com (Web Unlocker → 122 listings) | ✅ 122 real listings |
 | **TenderSentry** | `c_mt0uqsr9275nljkmec` | GeM + CPPP e-procurement | — (seeded) | 📋 Live collector |
 | **MandiWatch** | `c_mt1h2pqy2fdtlurkwq` | Agmarknet price boards | — (seeded) | 🌾 Live collector |
-| **CollegeCutoff** | `c_mt1h6w0ukc2lut11g` | JoSAA counselling boards | — (seeded) | 🎓 Live collector |
-| **StartupPulse** | `c_mt1hcxap876dyo54k` | GKToday + Startup India | gktoday.in (Playwright) | ✅ 20 real items |
+| **CollegeCutoff** | `c_mt1h6w0ukc2lut11g` | JoSAA counselling boards | josaa.nic.in (Web Unlocker — 91KB HTML) | ✅ Web Unlocker verified |
+| **StartupPulse** | `c_mt1hcxap876dyo54k` | GKToday + Startup India | gktoday.in (Web Unlocker → 67KB HTML) | ✅ Web Unlocker verified |
 
 ---
 
