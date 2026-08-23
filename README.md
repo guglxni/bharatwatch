@@ -126,16 +126,32 @@ npx @brightdata/cli scraper run c_mt0srxto15g4to0is3 "https://ssc.nic.in" --pret
 
 Returns clean, structured JSON.
 
-### 3. Self-heal when the site changes
+### 3. Self-heal when the site changes (closed-loop)
+
+BharatWatch heals automatically — no manual approve step. When a run fails, the orchestrator immediately triggers the heal loop:
+
+1. **Detect** breakage (empty output / schema validation failure / request error)
+2. **Build a context-aware prompt** from the last *good* snapshot (expected field list + previous failure)
+3. **Heal** with `--auto-approve --auto-save` (the AI fix is applied and saved in one shot)
+4. **Re-run** the collector and **validate** that real data came back
+5. Mark the source **healthy** only if data is recovered — otherwise retry up to 3× with refined prompts, then **escalate** for human review
 
 ```bash
-npx @brightdata/cli scraper heal c_mt0srxto15g4to0is3   "The page layout changed. The notice cards are now article elements with class notice-card. The official_link is no longer in an anchor tag; it is now the text content of a div with class notice-link and data-url attribute. Do not navigate any links. Extract from the single page only."
+# Heal every broken source right now (closed-loop)
+.venv/bin/python -m bharatwatch.cli heal_monitor
 
-# Approve the generated fix
-npx @brightdata/cli scraper approve c_mt0srxto15g4to0is3
+# Heal one source by id, with retries
+.venv/bin/python -m bharatwatch.cli heal 1
 
-# Re-run to verify data is recovered
-npx @brightdata/cli scraper run c_mt0srxto15g4to0is3 "https://ssc.nic.in" --pretty
+# Always-on self-healing daemon: sweep + auto-heal every 5 min
+.venv/bin/python -m bharatwatch.cli watch --interval 300
+```
+
+Under the hood it's the Bright Data CLI:
+
+```bash
+npx @brightdata/cli scraper heal c_mt0srxto15g4to0is3 "The page layout changed..." \
+  --auto-approve --auto-save --json
 ```
 
 The collector ID stays the same; downstream code and the dashboard never change.
