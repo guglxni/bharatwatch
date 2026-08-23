@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden;
+        background: #09090b;
+      }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        color: #fafafa;
+      }
+      .mono, code, pre { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+      /* ---- BharatWatch dark-native design tokens (mirrors dashboard) ---- */
+      :root {
+        --bg: #09090b;
+        --card: #111113;
+        --border: rgba(255,255,255,0.09);
+        --border-strong: rgba(255,255,255,0.14);
+        --muted: #a1a1aa;
+        --fg: #fafafa;
+        --indigo: #6366f1;
+        --violet: #a78bfa;
+        --sky: #38bdf8;
+        --emerald: #34d399;
+        --amber: #fbbf24;
+        --red: #f87171;
+        --pink: #f472b6;
+        --orange: #fb923c;
+      }
+
+      .clip { position: absolute; }
+
+      /* full-bleed scene background with grid + glow */
+      .scene-bg {
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(60% 50% at 50% 0%, rgba(99,102,241,0.14), transparent 70%),
+          linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+        background-size: 100% 100%, 64px 64px, 64px 64px;
+        background-color: var(--bg);
+      }
+      .glow {
+        position:absolute; border-radius:50%;
+        filter: blur(120px); pointer-events:none;
+      }
+
+      .eyebrow {
+        font-size: 20px; letter-spacing: 0.18em; text-transform: uppercase;
+        color: var(--indigo); font-weight: 600;
+      }
+      .display {
+        font-weight: 600; letter-spacing: -0.04em; line-height: 1.05;
+      }
+      .grad-text {
+        background: linear-gradient(92deg, var(--indigo), var(--violet), var(--sky));
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+      }
+      .muted { color: var(--muted); }
+
+      .chip {
+        display:inline-flex; align-items:center; gap:12px;
+        padding: 12px 26px; border-radius: 999px;
+        border: 1px solid rgba(99,102,241,0.3);
+        background: rgba(99,102,241,0.12);
+        font-size: 22px; font-weight: 500; color: #c7d2fe;
+      }
+      .card {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+      }
+      .kpi-num { font-weight:600; letter-spacing:-0.03em; font-variant-numeric: tabular-nums; }
+      .live-dot { width:14px; height:14px; border-radius:50%; background: var(--emerald); box-shadow: 0 0 0 6px rgba(52,211,153,0.15); }
+      .tag {
+        display:inline-block; padding: 6px 16px; border-radius: 999px;
+        font-size: 18px; font-weight: 600; border: 1px solid var(--border);
+      }
+
+      .mod-icon {
+        width: 84px; height: 84px; border-radius: 22px;
+        display:flex; align-items:center; justify-content:center;
+        font-size: 42px; color:#fff;
+        box-shadow: 0 18px 40px -12px rgba(0,0,0,0.6);
+      }
+
+      /* dashboard frame mock */
+      .frame {
+        border-radius: 20px; overflow:hidden;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: #0f1011;
+        box-shadow: 0 50px 100px -40px rgba(99,102,241,0.4);
+      }
+      .frame-bar {
+        height: 52px; display:flex; align-items:center; gap: 10px;
+        padding: 0 22px; border-bottom: 1px solid rgba(255,255,255,0.06);
+        background: rgba(255,255,255,0.02);
+      }
+      .dot { width:16px; height:16px; border-radius:50%; }
+      .urlbar {
+        margin-left:14px; flex:1; height:30px; border-radius:8px;
+        background: rgba(255,255,255,0.05); display:flex; align-items:center;
+        padding: 0 14px; font-size: 15px; color: var(--muted); font-family:"JetBrains Mono",monospace;
+      }
+
+      /* ---- caption rail (lower-third subtitle) ---- */
+      .caption-line {
+        position:absolute; left:50%; bottom:64px; transform:translateX(-50%);
+        max-width: 1500px; text-align:center;
+        font-size: 34px; font-weight: 500; line-height:1.4;
+        color: #fafafa;
+        text-shadow: 0 2px 16px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.9);
+        pointer-events: none;
+        z-index: 100;
+        padding: 0 60px;
+        white-space: nowrap;
+      }
+      .caption-line.cap-high { bottom: 210px; }
+    </style>
+  </head>
+  <body>
+    <!--
+      SCENE TIMELINE (seconds), built from measured VO durations + 1.1s gaps:
+        S1 hook    0.0 – 15.4   (vo 14.26)
+        S2 problem 15.4 – 29.4  (vo 12.82)
+        S3 what    29.4 – 50.0  (vo 19.50)
+        S4 modules 50.0 – 71.5  (vo 20.34)
+        S5 arch    71.5 – 93.6  (vo 21.04)
+        S6 demo    93.6 – 112.0 (vo 17.28)
+        S7 heal    112.0 – 132.3 (vo 19.13)
+        S8 close   132.3 – 142.0 (vo 8.68) + 1.0 tail
+      total duration = 142
+    -->
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="142"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- ================= VOICEOVER (single narration track) ================= -->
+      <audio id="narration" src="assets/vo/narration.mp3" data-start="0" data-duration="142" data-track-index="50" data-volume="1"></audio>
+
+      <!-- ================= BACKGROUND MUSIC (ducked under VO via sidechain carve) ================= -->
+      <audio id="bgm" src="assets/bgm/bgm.mp3" data-start="0" data-duration="142" data-track-index="40" data-volume="0.14"
+        data-fx-carve='{"enabled": true, "sources": ["narration"], "strength": 0.4}'></audio>
+
+      <!-- ================= CAPTION RAIL ================= -->
+      <!-- ================= CAPTION RAIL (one clip per line, seekable) ================= -->
+      <div id="cap0" class="clip caption-line" data-start="0.57" data-duration="3.03" data-track-index="90">Every day, India's public portals publish thousands</div>
+      <div id="cap1" class="clip caption-line" data-start="3.6" data-duration="2.72" data-track-index="90">of job alerts, tenders, and market prices.</div>
+      <div id="cap2" class="clip caption-line" data-start="6.49" data-duration="2.79" data-track-index="90">And every day, that data quietly changes,</div>
+      <div id="cap3" class="clip caption-line" data-start="9.28" data-duration="1.88" data-track-index="90">moves, and disappears.</div>
+      <div id="cap4" class="clip caption-line" data-start="11.33" data-duration="1.71" data-track-index="90">Bharat Watch was built to watch it</div>
+      <div id="cap5" class="clip caption-line" data-start="13.04" data-duration="1.5" data-track-index="90">all, automatically.</div>
+      <div id="cap6" class="clip caption-line" data-start="15.83" data-duration="2.67" data-track-index="90">Government websites are notoriously fragile.</div>
+      <div id="cap7" class="clip caption-line" data-start="18.53" data-duration="2.91" data-track-index="90">They redesign without warning, break scrapers overnight,</div>
+      <div id="cap8" class="clip caption-line" data-start="21.44" data-duration="2.73" data-track-index="90">and offer no APIs, so critical public</div>
+      <div id="cap9" class="clip caption-line" data-start="24.17" data-duration="1.93" data-track-index="90">data stays locked in pages that nobody</div>
+      <div id="cap10" class="clip caption-line" data-start="26.45" data-duration="1.95" data-track-index="90">can reliably track, until now.</div>
+      <div id="cap11" class="clip caption-line" data-start="29.95" data-duration="3.74" data-track-index="90">BharatWatch is a self-healing local intelligence platform,</div>
+      <div id="cap12" class="clip caption-line" data-start="33.87" data-duration="3.27" data-track-index="90">five live collectors monitor India's most important</div>
+      <div id="cap13" class="clip caption-line" data-start="37.14" data-duration="1.44" data-track-index="90">public data sources.</div>
+      <div id="cap14" class="clip caption-line" data-start="38.62" data-duration="2.78" data-track-index="90">It's built entirely on Bright Data's scraper</div>
+      <div id="cap15" class="clip caption-line" data-start="41.4" data-duration="0.48" data-track-index="90">studio.</div>
+      <div id="cap16" class="clip caption-line" data-start="41.88" data-duration="3.27" data-track-index="90">Every single scraper is custom generated from</div>
+      <div id="cap17" class="clip caption-line" data-start="45.18" data-duration="2.45" data-track-index="90">a plain English prompt, not pulled from</div>
+      <div id="cap18" class="clip caption-line" data-start="47.64" data-duration="1.4" data-track-index="90">a pre-built library.</div>
+      <div id="cap19" class="clip caption-line" data-start="50.56" data-duration="3.66" data-track-index="90">NaukriAlert tracks Sarkari job notifications with vacancies</div>
+      <div id="cap20" class="clip caption-line" data-start="54.25" data-duration="1.25" data-track-index="90">and deadlines.</div>
+      <div id="cap21" class="clip caption-line" data-start="55.56" data-duration="3.13" data-track-index="90">TenderSentry watches public procurement worth crores.</div>
+      <div id="cap22" class="clip caption-line" data-start="58.78" data-duration="3.01" data-track-index="90">MandiWatch follows daily crop prices across</div>
+      <div id="cap23" class="clip caption-line" data-start="61.79" data-duration="0.61" data-track-index="90">mandis.</div>
+      <div id="cap24" class="clip caption-line" data-start="62.56" data-duration="2.94" data-track-index="90">CollegeCutoff monitors college admission ranks.</div>
+      <div id="cap25" class="clip caption-line" data-start="65.66" data-duration="3.22" data-track-index="90">And startup pulse surfaces, government funding schemes.</div>
+      <div id="cap26" class="clip caption-line" data-start="69.06" data-duration="1.84" data-track-index="90">Five verticals, one mission.</div>
+      <div id="cap27" class="clip caption-line" data-start="72.06" data-duration="2.36" data-track-index="90">Under the hood, a Python and fast</div>
+      <div id="cap28" class="clip caption-line" data-start="74.42" data-duration="3.38" data-track-index="90">API orchestrator runs every scrape, validates each</div>
+      <div id="cap29" class="clip caption-line" data-start="78.15" data-duration="3.04" data-track-index="90">record against typed pedantic schemas, and stores</div>
+      <div id="cap30" class="clip caption-line" data-start="81.19" data-duration="1.93" data-track-index="90">snapshots in SQLite.</div>
+      <div id="cap31" class="clip caption-line" data-start="83.12" data-duration="2.53" data-track-index="90">A diff engine compares every snapshot to</div>
+      <div id="cap32" class="clip caption-line" data-start="85.72" data-duration="2.88" data-track-index="90">the last, and emits field-level changes.</div>
+      <div id="cap33" class="clip caption-line" data-start="88.77" data-duration="2.78" data-track-index="90">And a dark native next-js dashboard visualizes</div>
+      <div id="cap34" class="clip caption-line" data-start="91.62" data-duration="1.4" data-track-index="90">it all in real-time.</div>
+      <div id="cap35" class="clip caption-line" data-start="94.08" data-duration="1.64" data-track-index="90">Here's the live dashboard.</div>
+      <div id="cap36" class="clip caption-line" data-start="95.75" data-duration="2.97" data-track-index="90">Mission Control shows five healthy sources, over</div>
+      <div id="cap37" class="clip caption-line" data-start="98.72" data-duration="3.23" data-track-index="90">30 records, and 48 changes caught this</div>
+      <div id="cap38" class="clip caption-line" data-start="101.95" data-duration="0.56" data-track-index="90">week.</div>
+      <div id="cap39" class="clip caption-line" data-start="102.51" data-duration="2.05" data-track-index="90">Drilling into Nokri Alert, you can see</div>
+      <div id="cap40" class="clip caption-line" data-start="104.56" data-duration="2.36" data-track-index="90">the actual extracted rows.</div>
+      <div id="cap41" class="clip caption-line" data-start="106.92" data-duration="2.12" data-track-index="90">Every chart is fed by real scraped</div>
+      <div id="cap42" class="clip caption-line" data-start="109.04" data-duration="2.04" data-track-index="90">data with seven days of history.</div>
+      <div id="cap43" class="clip caption-line cap-high" data-start="112.42" data-duration="1.9" data-track-index="90">But here's the real magic.</div>
+      <div id="cap44" class="clip caption-line cap-high" data-start="114.34" data-duration="2.0" data-track-index="90">When a portal changes its layout, the</div>
+      <div id="cap45" class="clip caption-line cap-high" data-start="116.43" data-duration="2.53" data-track-index="90">scraper doesn't break, it heals.</div>
+      <div id="cap46" class="clip caption-line cap-high" data-start="118.98" data-duration="3.02" data-track-index="90">The diff engine detects selector drift, bright</div>
+      <div id="cap47" class="clip caption-line cap-high" data-start="122.01" data-duration="3.05" data-track-index="90">data's AI regenerates the extraction code, and</div>
+      <div id="cap48" class="clip caption-line cap-high" data-start="125.06" data-duration="3.84" data-track-index="90">the pipeline resumes, zero manual fixes,</div>
+      <div id="cap49" class="clip caption-line cap-high" data-start="128.94" data-duration="2.55" data-track-index="90">five out of five heals succeeded.</div>
+      <div id="cap50" class="clip caption-line" data-start="132.77" data-duration="1.37" data-track-index="90">Bharat Watch.</div>
+      <div id="cap51" class="clip caption-line" data-start="134.15" data-duration="2.68" data-track-index="90">India's public data, watched for you.</div>
+      <div id="cap52" class="clip caption-line" data-start="136.83" data-duration="3.25" data-track-index="90">Self-healing, open, and always on, built for</div>
+      <div id="cap53" class="clip caption-line" data-start="140.08" data-duration="1.13" data-track-index="90">into the Scrape-Verse.</div>
+
+      <!-- ================= SCENE 1 · HOOK (0–15.4) ================= -->
+      <div id="s1" class="clip" data-start="0" data-duration="15.4" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="glow" style="width:900px;height:900px;left:50%;top:-500px;transform:translateX(-50%);background:rgba(99,102,241,0.18)"></div>
+
+        <div id="s1-badge" class="chip" style="position:absolute;top:200px;left:50%;transform:translateX(-50%)">✦ &nbsp;BharatWatch</div>
+        <div id="s1-title" class="display" style="position:absolute;top:280px;left:0;right:0;text-align:center;font-size:120px;">
+          India's public data,<br /><span class="grad-text">watched for you.</span>
+        </div>
+        <div id="s1-sub" class="muted" style="position:absolute;top:660px;left:0;right:0;text-align:center;font-size:34px;">
+          thousands of job alerts · tenders · market prices
+        </div>
+
+        <!-- floating ticker chips -->
+        <div id="s1-c1" class="tag mono" style="position:absolute;top:790px;left:340px;background:rgba(251,146,60,0.1);color:#fdba74;border-color:rgba(251,146,60,0.25)">🔔 SSC CGL · 17,727 vacancies</div>
+        <div id="s1-c2" class="tag mono" style="position:absolute;top:790px;left:920px;background:rgba(56,189,248,0.1);color:#7dd3fc;border-color:rgba(56,189,248,0.25)">📄 GeM Tender · ₹185 L</div>
+        <div id="s1-c3" class="tag mono" style="position:absolute;top:790px;left:1320px;background:rgba(52,211,153,0.1);color:#6ee7b7;border-color:rgba(52,211,153,0.25)">🌾 Tomato · ₹1,500/q</div>
+      </div>
+
+      <!-- ================= SCENE 2 · PROBLEM (15.4–29.4) ================= -->
+      <div id="s2" class="clip" data-start="15.4" data-duration="14" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="glow" style="width:800px;height:800px;right:-200px;top:-200px;background:rgba(248,113,113,0.12)"></div>
+
+        <div class="eyebrow" style="position:absolute;top:180px;left:50%;transform:translateX(-50%)">The Problem</div>
+        <div id="s2-title" class="display" style="position:absolute;top:250px;left:0;right:0;text-align:center;font-size:96px;">
+          Public portals are<br /><span style="color:var(--red)">fragile.</span>
+        </div>
+
+        <div id="s2-r1" class="card" style="position:absolute;top:600px;left:280px;width:430px;padding:38px;font-size:30px;">
+          <div style="font-size:44px;margin-bottom:14px">⚠️</div>
+          <div class="mono muted" style="font-size:22px">redesigns without warning</div>
+        </div>
+        <div id="s2-r2" class="card" style="position:absolute;top:600px;left:745px;width:430px;padding:38px;font-size:30px;">
+          <div style="font-size:44px;margin-bottom:14px">💔</div>
+          <div class="mono muted" style="font-size:22px">scrapers break overnight</div>
+        </div>
+        <div id="s2-r3" class="card" style="position:absolute;top:600px;left:1210px;width:430px;padding:38px;font-size:30px;">
+          <div style="font-size:44px;margin-bottom:14px">🔌</div>
+          <div class="mono muted" style="font-size:22px">no public APIs offered</div>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 3 · WHAT (29.4–50) ================= -->
+      <div id="s3" class="clip" data-start="29.4" data-duration="20.6" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="glow" style="width:900px;height:900px;left:-300px;top:200px;background:rgba(167,139,250,0.12)"></div>
+
+        <div class="eyebrow" style="position:absolute;top:170px;left:200px">Introducing</div>
+        <div id="s3-title" class="display" style="position:absolute;top:235px;left:200px;font-size:104px;">
+          Bharat<span class="grad-text">Watch</span>
+        </div>
+        <div id="s3-sub" class="muted" style="position:absolute;top:390px;left:200px;width:820px;font-size:38px;line-height:1.3;">
+          A self-healing <span style="color:var(--fg)">local intelligence</span> platform for India.
+        </div>
+
+        <div id="s3-b1" class="card" style="position:absolute;top:560px;left:200px;width:820px;padding:32px 40px;display:flex;align-items:center;gap:24px;">
+          <div class="live-dot"></div>
+          <div style="font-size:30px;">Five live collectors · every scraper <span style="color:var(--sky)">custom-generated</span></div>
+        </div>
+        <div id="s3-b2" class="card mono" style="position:absolute;top:690px;left:200px;width:820px;padding:32px 40px;font-size:26px;">
+          <span style="color:var(--violet)">$</span> bdata scraper create <span style="color:var(--muted)">&lt;url&gt;</span> <span style="color:var(--emerald)">"extract the notices…"</span>
+        </div>
+        <div id="s3-badge" class="chip" style="position:absolute;top:830px;left:200px;">⚡ Built on Bright Data Scraper Studio</div>
+      </div>
+
+      <!-- ================= SCENE 4 · FIVE MODULES (50–71.5) ================= -->
+      <div id="s4" class="clip" data-start="50" data-duration="21.5" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="eyebrow" style="position:absolute;top:150px;left:50%;transform:translateX(-50%)">Five Live Verticals</div>
+        <div id="s4-title" class="display" style="position:absolute;top:210px;left:0;right:0;text-align:center;font-size:72px;">One watcher. Five fronts.</div>
+
+        <!-- module cards row -->
+        <div class="mod-card" id="s4-m1" style="position:absolute;top:430px;left:130px;text-align:center;width:320px;">
+          <div class="mod-icon" style="background:linear-gradient(135deg,#f97316,#fb923c);margin:0 auto">🔔</div>
+          <div style="font-size:34px;font-weight:600;margin-top:22px">NaukriAlert</div>
+          <div class="muted" style="font-size:21px;margin-top:10px">Sarkari job alerts<br/>& deadlines</div>
+        </div>
+        <div class="mod-card" id="s4-m2" style="position:absolute;top:430px;left:500px;text-align:center;width:320px;">
+          <div class="mod-icon" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);margin:0 auto">📄</div>
+          <div style="font-size:34px;font-weight:600;margin-top:22px">TenderSentry</div>
+          <div class="muted" style="font-size:21px;margin-top:10px">Govt tenders<br/>worth crores</div>
+        </div>
+        <div class="mod-card" id="s4-m3" style="position:absolute;top:430px;left:870px;text-align:center;width:320px;">
+          <div class="mod-icon" style="background:linear-gradient(135deg,#10b981,#34d399);margin:0 auto">🌾</div>
+          <div style="font-size:34px;font-weight:600;margin-top:22px">MandiWatch</div>
+          <div class="muted" style="font-size:21px;margin-top:10px">Daily crop<br/>prices</div>
+        </div>
+        <div class="mod-card" id="s4-m4" style="position:absolute;top:430px;left:1240px;text-align:center;width:320px;">
+          <div class="mod-icon" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);margin:0 auto">🎓</div>
+          <div style="font-size:34px;font-weight:600;margin-top:22px">CollegeCutoff</div>
+          <div class="muted" style="font-size:21px;margin-top:10px">JoSAA admission<br/>ranks</div>
+        </div>
+        <div class="mod-card" id="s4-m5" style="position:absolute;top:430px;left:1610px;text-align:center;width:250px;">
+          <div class="mod-icon" style="background:linear-gradient(135deg,#ec4899,#f472b6);margin:0 auto">🚀</div>
+          <div style="font-size:34px;font-weight:600;margin-top:22px">StartupPulse</div>
+          <div class="muted" style="font-size:21px;margin-top:10px">Funding<br/>schemes</div>
+        </div>
+
+        <div id="s4-tag" class="display" style="position:absolute;top:820px;left:0;right:0;text-align:center;font-size:44px;">
+          Five verticals. <span class="grad-text">One mission.</span>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 5 · ARCHITECTURE (71.5–93.6) ================= -->
+      <div id="s5" class="clip" data-start="71.5" data-duration="22.1" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="eyebrow" style="position:absolute;top:150px;left:200px">Tech Stack &amp; Architecture</div>
+        <div id="s5-title" class="display" style="position:absolute;top:215px;left:200px;font-size:64px;">Built to be <span class="grad-text">trusted.</span></div>
+
+        <div id="s5-n1" class="card" style="position:absolute;top:420px;left:200px;width:680px;padding:34px 38px;">
+          <div style="font-size:26px;color:var(--sky);font-weight:600">◈ Python + FastAPI orchestrator</div>
+          <div class="muted" style="font-size:23px;margin-top:12px">runs every scrape on schedule</div>
+        </div>
+        <div id="s5-n2" class="card" style="position:absolute;top:560px;left:200px;width:680px;padding:34px 38px;">
+          <div style="font-size:26px;color:var(--violet);font-weight:600">◈ Pydantic schemas</div>
+          <div class="muted" style="font-size:23px;margin-top:12px">every record typed &amp; validated</div>
+        </div>
+        <div id="s5-n3" class="card" style="position:absolute;top:700px;left:200px;width:680px;padding:34px 38px;">
+          <div style="font-size:26px;color:var(--emerald);font-weight:600">◈ SQLite snapshots + diff engine</div>
+          <div class="muted" style="font-size:23px;margin-top:12px">field-level change detection</div>
+        </div>
+        <div id="s5-n4" class="card" style="position:absolute;top:840px;left:200px;width:680px;padding:34px 38px;">
+          <div style="font-size:26px;color:var(--amber);font-weight:600">◈ Next.js 16 dashboard</div>
+          <div class="muted" style="font-size:23px;margin-top:12px">dark-native · real-time charts</div>
+        </div>
+
+        <!-- flow diagram -->
+        <div id="s5-flow" class="mono" style="position:absolute;top:470px;left:980px;width:840px;">
+          <div class="card" style="padding:30px 40px;text-align:center;font-size:28px;border-color:rgba(99,102,241,0.3)">🕷️ Bright Data Collectors</div>
+          <div style="text-align:center;color:var(--muted);font-size:36px;margin:14px 0">↓</div>
+          <div class="card" style="padding:30px 40px;text-align:center;font-size:28px;border-color:rgba(56,189,248,0.3)">⚙️ Orchestrator · validate · snapshot</div>
+          <div style="text-align:center;color:var(--muted);font-size:36px;margin:14px 0">↓</div>
+          <div class="card" style="padding:30px 40px;text-align:center;font-size:28px;border-color:rgba(52,211,153,0.3)">📊 Dashboard · diffs · heal loop</div>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 6 · LIVE DEMO (93.6–112) ================= -->
+      <div id="s6" class="clip" data-start="93.6" data-duration="18.4" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="eyebrow" style="position:absolute;top:130px;left:50%;transform:translateX(-50%)">Live Demo</div>
+        <div id="s6-title" class="display" style="position:absolute;top:185px;left:0;right:0;text-align:center;font-size:56px;">Mission Control, <span class="grad-text">for real.</span></div>
+
+        <!-- dashboard mock -->
+        <div id="s6-frame" class="frame" style="position:absolute;top:290px;left:260px;width:1400px;height:760px;">
+          <div class="frame-bar">
+            <span class="dot" style="background:#f87171"></span>
+            <span class="dot" style="background:#fbbf24"></span>
+            <span class="dot" style="background:#34d399"></span>
+            <div class="urlbar">localhost:3000/dashboard</div>
+          </div>
+          <div style="display:flex;height:708px;">
+            <!-- sidebar -->
+            <div style="width:230px;border-right:1px solid var(--border);padding:24px 18px;background:#0c0d0e;">
+              <div style="font-size:20px;font-weight:600;margin-bottom:26px">📊 Mission Control</div>
+              <div class="mono muted" style="font-size:17px;line-height:2.6">🔔 NaukriAlert<br/>📄 TenderSentry<br/>🌾 MandiWatch<br/>🎓 CollegeCutoff<br/>🚀 StartupPulse</div>
+            </div>
+            <!-- content -->
+            <div style="flex:1;padding:30px">
+              <div style="display:flex;gap:18px;margin-bottom:22px">
+                <div class="card" style="flex:1;padding:24px"><div class="kpi-num" style="font-size:52px;color:var(--indigo)">5</div><div class="muted" style="font-size:18px;margin-top:6px">Live Sources</div></div>
+                <div class="card" style="flex:1;padding:24px"><div class="kpi-num" style="font-size:52px;color:var(--sky)">32</div><div class="muted" style="font-size:18px;margin-top:6px">Records</div></div>
+                <div class="card" style="flex:1;padding:24px"><div class="kpi-num" style="font-size:52px;color:var(--amber)">48</div><div class="muted" style="font-size:18px;margin-top:6px">Changes · 7d</div></div>
+              </div>
+              <div class="card" style="padding:24px;height:220px;position:relative;overflow:hidden">
+                <div class="muted" style="font-size:18px;margin-bottom:10px">Change activity — 7 days</div>
+                <svg viewBox="0 0 600 140" style="width:100%;height:150px" preserveAspectRatio="none">
+                  <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.4"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></linearGradient></defs>
+                  <path d="M0,120 C60,110 90,60 150,64 C210,68 240,36 300,40 C360,44 390,80 450,64 C510,48 540,30 600,22 L600,140 L0,140 Z" fill="url(#ga)"/>
+                  <path d="M0,120 C60,110 90,60 150,64 C210,68 240,36 300,40 C360,44 390,80 450,64 C510,48 540,30 600,22" fill="none" stroke="#6366f1" stroke-width="4"/>
+                </svg>
+              </div>
+              <div style="display:flex;gap:18px;margin-top:22px">
+                <div class="card" style="flex:1;padding:20px;display:flex;align-items:center;gap:14px;border-color:rgba(52,211,153,0.2)"><div class="live-dot"></div><div class="mono" style="font-size:19px;color:#6ee7b7">All collectors operational</div></div>
+                <div class="card" style="flex:1;padding:20px;display:flex;align-items:center;gap:14px;border-color:rgba(99,102,241,0.2)"><div style="font-size:22px">🩹</div><div class="mono" style="font-size:19px;color:#c7d2fe">Self-heal · selector drift → fixed</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 7 · SELF-HEAL (112–132.3) ================= -->
+      <div id="s7" class="clip" data-start="112" data-duration="20.3" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="glow" style="width:900px;height:900px;left:50%;bottom:-500px;transform:translateX(-50%);background:rgba(52,211,153,0.12)"></div>
+
+        <div class="eyebrow" style="position:absolute;top:170px;left:50%;transform:translateX(-50%);color:var(--emerald)">Spider-Sense</div>
+        <div id="s7-title" class="display" style="position:absolute;top:230px;left:0;right:0;text-align:center;font-size:92px;">
+          Sites change.<br /><span class="grad-text">Scrapers adapt.</span>
+        </div>
+
+        <div id="s7-term" class="card mono" style="position:absolute;top:540px;left:50%;transform:translateX(-50%);width:1100px;padding:36px 52px;font-size:26px;line-height:1.9;background:#0c0d0e">
+          <div><span class="muted"># layout change detected on ssc.nic.in</span></div>
+          <div style="color:var(--amber)">⚠ table#notices columns reordered</div>
+          <div style="color:var(--sky)">↻ regenerating extraction code…</div>
+          <div style="color:var(--emerald)">✓ healed in 42s — 0 records lost</div>
+        </div>
+
+        <div id="s7-badges" style="position:absolute;top:860px;left:50%;transform:translateX(-50%);display:flex;gap:26px">
+          <div class="chip" style="border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.1);color:#6ee7b7">✓ 5/5 heals succeeded</div>
+          <div class="chip" style="border-color:var(--border-strong);background:rgba(255,255,255,0.04);color:var(--fg)">0 manual fixes</div>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 8 · CLOSE (132.3–142) ================= -->
+      <div id="s8" class="clip" data-start="132.3" data-duration="9.7" data-track-index="1">
+        <div class="scene-bg"></div>
+        <div class="glow" style="width:1100px;height:1100px;left:50%;top:-600px;transform:translateX(-50%);background:rgba(99,102,241,0.2)"></div>
+
+        <div id="s8-logo" style="position:absolute;top:260px;left:50%;transform:translateX(-50%);width:120px;height:120px;border-radius:30px;background:linear-gradient(135deg,#6366f1,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:64px;color:#fff;box-shadow:0 24px 60px -12px rgba(99,102,241,0.6)">भ</div>
+        <div id="s8-title" class="display" style="position:absolute;top:430px;left:0;right:0;text-align:center;font-size:110px;">
+          Bharat<span class="grad-text">Watch</span>
+        </div>
+        <div id="s8-sub" class="muted" style="position:absolute;top:610px;left:0;right:0;text-align:center;font-size:34px;">
+          India's public data, watched for you.
+        </div>
+        <div id="s8-cta" class="chip" style="position:absolute;top:730px;left:50%;transform:translateX(-50%);font-size:24px;">⚡ Into the Scrape-Verse · WeMakeDevs × Bright Data</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // helper: fade+rise
+      const rise = (sel, at, dur = 0.8, from = 50) =>
+        tl.from(sel, { autoAlpha: 0, y: from, duration: dur, ease: "power3.out" }, at);
+
+      /* ---- S1 HOOK ---- */
+      rise("#s1-badge", 0.3, 0.7, 30);
+      rise("#s1-title", 0.7, 1.0, 70);
+      rise("#s1-sub", 1.6, 0.8, 40);
+      rise("#s1-c1", 2.4, 0.6, 30);
+      rise("#s1-c2", 2.9, 0.6, 30);
+      rise("#s1-c3", 3.4, 0.6, 30);
+
+      /* ---- S2 PROBLEM ---- */
+      rise("#s2-title", 15.7, 0.9, 60);
+      rise("#s2-r1", 17.0, 0.7, 40);
+      rise("#s2-r2", 17.6, 0.7, 40);
+      rise("#s2-r3", 18.2, 0.7, 40);
+
+      /* ---- S3 WHAT ---- */
+      rise("#s3-title", 29.7, 0.9, 60);
+      rise("#s3-sub", 30.5, 0.8, 40);
+      rise("#s3-b1", 31.4, 0.7, 30);
+      rise("#s3-b2", 32.0, 0.7, 30);
+      rise("#s3-badge", 32.7, 0.7, 20);
+
+      /* ---- S4 MODULES (staggered cards) ---- */
+      rise("#s4-title", 50.4, 0.7, 40);
+      rise("#s4-m1", 51.0, 0.6, 60);
+      rise("#s4-m2", 51.4, 0.6, 60);
+      rise("#s4-m3", 51.8, 0.6, 60);
+      rise("#s4-m4", 52.2, 0.6, 60);
+      rise("#s4-m5", 52.6, 0.6, 60);
+      rise("#s4-tag", 53.6, 0.8, 30);
+
+      /* ---- S5 ARCH ---- */
+      rise("#s5-title", 71.8, 0.8, 40);
+      rise("#s5-n1", 72.6, 0.6, 40);
+      rise("#s5-n2", 73.1, 0.6, 40);
+      rise("#s5-n3", 73.6, 0.6, 40);
+      rise("#s5-n4", 74.1, 0.6, 40);
+      rise("#s5-flow", 74.6, 0.8, 40);
+
+      /* ---- S6 DEMO ---- */
+      rise("#s6-title", 93.9, 0.7, 40);
+      tl.from("#s6-frame", { autoAlpha: 0, y: 80, scale: 0.96, duration: 1.0, ease: "power3.out" }, 94.6);
+
+      /* ---- S7 HEAL ---- */
+      rise("#s7-title", 112.3, 0.9, 60);
+      tl.from("#s7-term", { autoAlpha: 0, y: 40, duration: 0.8, ease: "power3.out" }, 113.2);
+      rise("#s7-badges", 114.2, 0.7, 30);
+
+      /* ---- S8 CLOSE ---- */
+      tl.from("#s8-logo", { autoAlpha: 0, scale: 0.6, duration: 0.9, ease: "back.out(1.6)" }, 132.6);
+      rise("#s8-title", 133.3, 0.9, 60);
+      rise("#s8-sub", 134.1, 0.8, 40);
+      rise("#s8-cta", 134.9, 0.7, 30);
+
+      /* ================= CAPTIONS (deterministic per-line clips, seekable) ================= */
+      // Each caption line is its own .clip with data-start/data-duration controlling visibility.
+      // A subtle rise-in is animated for polish; the clip window alone handles on/off.
+      document.querySelectorAll(".caption-line").forEach((el) => {
+        const start = parseFloat(el.getAttribute("data-start"));
+        tl.from(el, { y: 16, duration: 0.25, ease: "power2.out" }, start);
+      });
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

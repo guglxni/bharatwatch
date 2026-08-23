@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1920px; height:1080px; overflow:hidden; }
+  body {
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+    background:#09090b;
+  }
+  .mono { font-family:"JetBrains Mono",monospace; }
+
+  /* bg: deep dark + indigo/violet nebula + grid */
+  .bg {
+    position:absolute; inset:0;
+    background:
+      radial-gradient(70% 90% at 18% 20%, rgba(99,102,241,0.32), transparent 60%),
+      radial-gradient(60% 80% at 85% 75%, rgba(167,139,250,0.26), transparent 62%),
+      radial-gradient(50% 60% at 70% 15%, rgba(56,189,248,0.16), transparent 60%),
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size:100% 100%,100% 100%,100% 100%,72px 72px,72px 72px;
+    background-color:#09090b;
+  }
+  .vignette { position:absolute; inset:0; box-shadow: inset 0 0 280px 60px rgba(0,0,0,0.6); }
+
+  /* top-left brand chip */
+  .brand {
+    position:absolute; top:64px; left:72px; display:flex; align-items:center; gap:20px;
+  }
+  .logo {
+    width:96px; height:96px; border-radius:26px;
+    background:linear-gradient(135deg,#6366f1,#a78bfa);
+    display:flex; align-items:center; justify-content:center;
+    font-size:56px; color:#fff; font-weight:700;
+    box-shadow:0 20px 50px -10px rgba(99,102,241,0.7);
+  }
+  .brand-name { font-size:44px; font-weight:600; letter-spacing:-0.02em; color:#fafafa; }
+
+  /* big headline, left aligned */
+  .headline {
+    position:absolute; top:250px; left:72px; right:640px;
+    font-size:128px; font-weight:700; letter-spacing:-0.045em; line-height:1.0; color:#fafafa;
+  }
+  .grad {
+    background:linear-gradient(92deg,#818cf8,#a78bfa,#38bdf8);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub {
+    position:absolute; top:600px; left:72px;
+    font-size:44px; font-weight:500; color:#c9cad1; letter-spacing:-0.01em;
+  }
+
+  /* self-heal badge */
+  .heal {
+    position:absolute; top:712px; left:72px;
+    display:inline-flex; align-items:center; gap:16px;
+    padding:20px 34px; border-radius:999px;
+    background:rgba(52,211,153,0.12); border:2px solid rgba(52,211,153,0.4);
+    color:#6ee7b7; font-size:34px; font-weight:600;
+  }
+  .heal .dot { width:20px; height:20px; border-radius:50%; background:#34d399; box-shadow:0 0 0 10px rgba(52,211,153,0.2); }
+
+  /* right cluster: floating stat cards */
+  .card {
+    position:absolute; border-radius:26px;
+    background:rgba(20,21,23,0.82); border:1px solid rgba(255,255,255,0.12);
+    backdrop-filter:blur(8px);
+    box-shadow:0 40px 80px -20px rgba(0,0,0,0.7);
+    padding:34px 40px;
+  }
+  .kpi { font-size:78px; font-weight:700; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; }
+  .kpi-label { font-size:26px; color:#a1a1aa; margin-top:6px; font-weight:500; }
+
+  #c1 { top:120px; left:1230px; transform:rotate(-3deg); }
+  #c1 .kpi { color:#818cf8; }
+  #c2 { top:400px; left:1420px; transform:rotate(2.5deg); }
+  #c2 .kpi { color:#38bdf8; }
+  #c3 { top:690px; left:1260px; transform:rotate(-2deg); }
+  #c3 .kpi { color:#34d399; }
+
+  /* mini module chips row — under the sub-headline, left column */
+  .chips { position:absolute; top:830px; left:72px; display:flex; gap:14px; }
+  .chip {
+    padding:12px 18px; border-radius:14px; font-size:21px; font-weight:600;
+    border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); color:#e4e4e7;
+    white-space:nowrap;
+  }
+
+  /* bottom-left hackathon strip */
+  .strip {
+    position:absolute; bottom:60px; left:72px;
+    display:flex; align-items:center; gap:18px;
+    font-size:28px; color:#d4d4d8; font-weight:500;
+  }
+  .strip .tag {
+    padding:10px 22px; border-radius:999px;
+    background:rgba(99,102,241,0.14); border:1px solid rgba(99,102,241,0.4); color:#c7d2fe;
+    font-weight:600;
+  }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="vignette"></div>
+
+  <div class="brand">
+    <div class="logo">भ</div>
+    <div class="brand-name">BharatWatch</div>
+  </div>
+
+  <div class="headline">India's public data,<br /><span class="grad">watched for you.</span></div>
+  <div class="sub">Self-healing scrapers that never break.</div>
+
+  <div class="heal"><span class="dot"></span> Sites change. Scrapers adapt.</div>
+
+  <div class="card" id="c1"><div class="kpi">5</div><div class="kpi-label">live collectors</div></div>
+  <div class="card" id="c2"><div class="kpi">48</div><div class="kpi-label">changes caught · 7d</div></div>
+  <div class="card" id="c3"><div class="kpi">5/5</div><div class="kpi-label">self-heals ✓</div></div>
+
+  <div class="chips">
+    <div class="chip">🔔 NaukriAlert</div>
+    <div class="chip">📄 TenderSentry</div>
+    <div class="chip">🌾 MandiWatch</div>
+    <div class="chip">🎓 CollegeCutoff</div>
+    <div class="chip">🚀 StartupPulse</div>
+  </div>
+
+  <div class="strip">
+    <span class="tag">⚡ Into the Scrape-Verse</span>
+    <span>WeMakeDevs × Bright Data</span>
+  </div>
+</body>
+</html>
