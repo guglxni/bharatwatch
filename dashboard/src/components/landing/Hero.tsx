@@ -66,7 +66,8 @@ export function Hero() {
             <StaggerItem>
               <p className="text-[17px] md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                 Five live scrapers tracking govt job alerts, tenders, mandi prices, college cutoffs and
-                startup schemes — powered by Bright Data Scraper Studio. When a site redesigns itself,
+                startup schemes — powered by 5 Bright Data products: Scraper Studio, Web Unlocker, SERP,
+                Discover & Scraping Browser. When a site redesigns itself,
                 <span className="text-foreground/90"> the scraper heals itself.</span>
               </p>
             </StaggerItem>

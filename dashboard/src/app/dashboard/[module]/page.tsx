@@ -18,6 +18,34 @@ import { cn } from "@/lib/utils";
 const MODULE_IDS = ["nauktrialert", "tendersentry", "mandiwatch", "collegecutoff", "startuppulse"];
 
 // per-module table column definitions: [key, label, align]
+// Also maps BD Scraper Studio field names to our display fields
+const FIELD_ALIASES: Record<string, Record<string, string>> = {
+  nauktrialert: {
+    job_title: "title",
+    post_date: "notification_date",
+    last_date: "last_application_date",
+    application_begin_date: "exam_date",
+    total_posts: "number_of_vacancies",
+    notification_pdf: "official_link",
+    official_website: "department",
+  },
+  tendersentry: {},
+  mandiwatch: {},
+  collegecutoff: {},
+  startuppulse: {},
+};
+
+function normalizeItem(item: Record<string, unknown>, module: string): Record<string, unknown> {
+  const aliases = FIELD_ALIASES[module] || {};
+  const normalized: Record<string, unknown> = { ...item };
+  for (const [bdField, ourField] of Object.entries(aliases)) {
+    if (item[bdField] && !item[ourField]) {
+      normalized[ourField] = item[bdField];
+    }
+  }
+  return normalized;
+}
+
 const COLUMNS: Record<string, [string, string, "left" | "right"][]> = {
   nauktrialert: [
     ["title", "Notification", "left"],
@@ -96,7 +124,8 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
   ]);
 
   const cols = COLUMNS[module];
-  const items = data.items;
+  const rawItems = data.items;
+  const items = rawItems.map((i) => normalizeItem(i as Record<string, unknown>, module));
 
   // ---- chart data per module ----
   let chartTitle = "";
@@ -212,6 +241,15 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">{data.meta.tagline}</p>
+                {data.meta.source_url && (
+                  <a
+                    href={data.meta.source_url}
+                    target="_blank"
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 transition-colors mt-0.5 inline-flex items-center gap-1"
+                  >
+                    ↗ {data.meta.source_url.replace("https://", "").replace("www.", "").split("/")[0]}
+                  </a>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -326,7 +364,8 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
           <CardContent>
             <div className="space-y-2">
               {hist.changes.slice(0, 8).map((c) => {
-                const item = (c.after || c.before) as Record<string, unknown>;
+                const raw = (c.after || c.before) as Record<string, unknown>;
+                const item = raw ? normalizeItem(raw, module) : {};
                 const label =
                   String(item?.title || item?.tender_id || item?.crop || item?.institute || "record");
                 return (

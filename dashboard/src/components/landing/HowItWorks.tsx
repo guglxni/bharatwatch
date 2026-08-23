@@ -6,20 +6,20 @@ const STEPS = [
   {
     n: "01",
     title: "Describe what to scrape",
-    desc: "One natural-language prompt to Bright Data Scraper Studio: point it at a public portal and name the fields you want.",
+    desc: "One natural-language prompt to Bright Data Scraper Studio: point it at a public portal and name the fields you want. AI builds the collector autonomously.",
     code: "bdata scraper create <url> \\\n  \"Extract all rows from table#notices…\"",
   },
   {
     n: "02",
-    title: "AI builds the collector",
-    desc: "The AI inspects the page, plans selectors, generates extraction code, and verifies it against the live page — fully autonomous.",
-    code: "→ planner → code_generator\n→ preview_runner → ✓ done",
+    title: "AI builds + discovers",
+    desc: "Scraper Studio generates extraction code. SERP + Discover find data sources across the web. Web Unlocker fetches pages as clean markdown.",
+    code: "bdata search \"ssc recruitment 2026\"\nbdata discover --intent \"govt jobs\"\nbdata scrape sarkariresult.com",
   },
   {
     n: "03",
     title: "Watch, diff, heal",
-    desc: "The orchestrator scrapes on schedule, hashes every snapshot, emits field-level diffs, and self-heals the moment a layout drifts.",
-    code: "snapshot ok · 6 records\nΔ created: SSC MTS 2024\n🩹 heal: selector drift → fixed",
+    desc: "The orchestrator runs collectors on schedule, hashes every snapshot, emits field-level diffs, and self-heals the moment a layout drifts — all closed-loop.",
+    code: "snapshot ok · 50 records\nΔ created: SSC MTS 2026\n🩹 heal: selector drift → auto-approved → fixed",
   },
 ];
 

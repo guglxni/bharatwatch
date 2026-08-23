@@ -4,10 +4,13 @@ import { FadeIn } from "@/components/magic/Reveal";
 
 const STACK = [
   { icon: "🕷️", name: "Bright Data Scraper Studio", desc: "AI-generated custom collectors + self-healing via bdata CLI" },
+  { icon: "🌐", name: "Bright Data Web Unlocker", desc: "Fetches any URL as clean markdown — bypasses anti-bot, 98% success rate" },
+  { icon: "🔍", name: "Bright Data SERP + Discover", desc: "AI-ranked Google results to discover govt data sources" },
+  { icon: "🖥️", name: "Bright Data Scraping Browser", desc: "Cloud Chrome via CDP for JS-rendered pages — full DOM snapshots" },
   { icon: "🐍", name: "FastAPI + SQLite", desc: "Orchestrator, diff engine, snapshot storage & REST API" },
   { icon: "⚛️", name: "Next.js 16 + shadcn/ui", desc: "Dark-native dashboard with recharts visualisation" },
   { icon: "🧪", name: "Pydantic Schemas", desc: "Every record validated against per-module typed schemas" },
-  { icon: "🚀", name: "GitHub Actions", desc: "Scheduled scrapes, heal monitors & CI validation" },
+  { icon: "🚀", name: "Vercel + Render", desc: "Dashboard on Vercel, API on Render — auto-deploy from GitHub" },
   { icon: "📦", name: "Public Data Only", desc: "No logins, no paywalls, no personal data — ever" },
 ];
 

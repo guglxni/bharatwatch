@@ -8,15 +8,15 @@ import { cn } from "@/lib/utils";
 
 const COPY: Record<string, { tagline: string; examples: string }> = {
   nauktrialert: {
-    tagline: "The moment SSC, UPSC, or IBPS drops a notification, it's on your radar — with vacancies, deadlines and exam dates.",
-    examples: "SSC CGL 2024 · 17,727 vacancies · apply by 24 Jul",
+    tagline: "The moment a new govt job drops on SarkariResult, it's on your radar — with vacancies, deadlines and exam dates.",
+    examples: "SBI Clerk Backlog 2026 · JSSC 10+2 Level · RVUNL Various Post",
   },
   tendersentry: {
-    tagline: "Every GeM and CPPP tender tracked with value, department and closing date. Miss nothing worth bidding on.",
-    examples: "GEM/2024/B/5841220 · ₹185L · EV charging · closes 20 Sep",
+    tagline: "Every government tender tracked with value, department and closing date. Miss nothing worth bidding on.",
+    examples: "Computer Hardware · ₹25L · Ministry of Electronics & IT",
   },
   mandiwatch: {
-    tagline: "Min, modal and max prices from mandis across Karnataka, Maharashtra, Punjab, Gujarat and more — refreshed daily.",
+    tagline: "Min, modal and max prices from mandis across India — refreshed daily via BD Discover + Web Unlocker.",
     examples: "Tomato @ Yeshwanthpur · ₹1,500/q modal · ▲4.2% this week",
   },
   collegecutoff: {

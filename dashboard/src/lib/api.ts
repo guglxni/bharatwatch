@@ -8,6 +8,7 @@ export interface ModuleInfo {
   icon: string;
   accent: string;
   source_name: string;
+  source_url: string;
   collector_id: string | null;
   health: string;
   item_count: number;
@@ -59,7 +60,7 @@ export const fetchChanges = (module: string) =>
 export const fetchModuleData = (module: string) =>
   get<{
     module: string;
-    meta: { label: string; tagline: string; icon: string; accent: string; source_name: string };
+    meta: { label: string; tagline: string; icon: string; accent: string; source_name: string; source_url: string };
     source: { name: string; url: string; collector_id: string; health: string; last_run_at: string | null };
     items: Record<string, unknown>[];
     captured_at: string | null;
