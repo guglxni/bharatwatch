@@ -260,3 +260,84 @@ def scrape_with_curl(url: str, module: str) -> Dict[str, Any]:
         result["error"] = f"curl: {e}"
 
     return result
+
+
+def scrape_with_brightdata_unlocker(url: str, module: str) -> Dict[str, Any]:
+    """Use Bright Data Web Unlocker Direct API to bypass proxy 403s.
+
+    This is the cleanest fix for "tunneling socket could not be established" —
+    it makes a REST call instead of a proxy tunnel, so the 403 never happens.
+    Returns HTML that we then parse with the same extractors.
+    """
+    import os
+    import subprocess
+    import json as _json
+
+    result: Dict[str, Any] = {"ok": False, "items": [], "count": 0, "error": None}
+
+    # Get the API key from the Bright Data CLI credentials
+    cred_path = os.path.expanduser("~/Library/Application Support/brightdata-cli/credentials.json")
+    api_key = ""
+    try:
+        with open(cred_path) as f:
+            api_key = _json.load(f).get("api", {}).get("key", "")
+    except Exception:
+        pass
+
+    if not api_key:
+        result["error"] = "no Bright Data API key found"
+        return result
+
+    try:
+        # Web Unlocker Direct API — REST call, no proxy tunnel
+        proc = subprocess.run(
+            [
+                "curl", "-s", "--max-time", "60",
+                "https://api.brightdata.com/request",
+                "-H", f"Authorization: Bearer {api_key}",
+                "-H", "Content-Type: application/json",
+                "-d", _json.dumps({
+                    "zone": "cli_unlocker",
+                    "url": url,
+                    "format": "raw",
+                }),
+            ],
+            capture_output=True, text=True, timeout=70,
+        )
+        html = proc.stdout
+        if not html or len(html) < 200:
+            result["error"] = f"unlocker returned empty (exit {proc.returncode})"
+            return result
+
+        # Parse the HTML using the same site-specific extractors
+        # We need a page-like object — use a simple regex-based parser
+        rules = EXTRACTION_RULES.get(module, {})
+        selectors = rules.get("selectors", {})
+        item_sel = selectors.get("item", "")
+
+        if "tr" in item_sel:
+            rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL | re.IGNORECASE)
+            for row in rows[:50]:
+                cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.DOTALL | re.IGNORECASE)
+                cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
+                if len(cells) >= 3:
+                    item = {f"col_{i}": c[:300] for i, c in enumerate(cells)}
+                    item["_source_url"] = url
+                    result["items"].append(item)
+
+        # Also try extracting links
+        if not result["items"]:
+            links = re.findall(r'<a[^>]*href="([^"]*)"[^>]*>([^<]{10,120})</a>', html, re.IGNORECASE)
+            for href, text in links[:30]:
+                text = re.sub(r"\s+", " ", text).strip()
+                if text and not any(x in text.lower() for x in ["login", "register", "home", "about"]):
+                    result["items"].append({"title": text[:200], "official_link": href[:200], "_source_url": url})
+
+        result["count"] = len(result["items"])
+        result["ok"] = result["count"] > 0
+        if not result["ok"]:
+            result["error"] = "no items extracted from unlocker HTML"
+    except Exception as e:
+        result["error"] = f"unlocker: {e}"
+
+    return result
