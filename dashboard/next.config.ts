@@ -1,11 +1,14 @@
 import type { NextConfig } from "next";
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "https://bharatwatch-api.onrender.com";
+
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        destination: `${API_BASE}/api/:path*`,
       },
     ];
   },
