@@ -20,6 +20,23 @@ Built for the **WeMakeDevs × Bright Data "Into the Scrape-Verse"** hackathon, A
 > **The problem:** Public data across Indian portals (jobs, tenders, mandi prices, college cutoffs, startup schemes) is scattered, changes layout without warning, and quietly breaks scrapers.
 > **The solution:** BharatWatch uses Bright Data Scraper Studio to build custom scrapers, monitors them for failures, and heals them with a single prompt when the target site changes — all exposed through a clean API and dashboard.
 
+## How It Scrapes Real Data
+
+BharatWatch uses a **dual-source scraping architecture**:
+
+1. **Bright Data Scraper Studio** (primary) — 5 custom AI-generated collectors (`scraper create`) running through Bright Data's proxy network with `scraper run` and self-healing via `scraper heal --auto-approve --auto-save`
+2. **Playwright + Stealth fallback** — when Bright Data's proxy returns 403 ("tunneling socket") or the domain isn't on the account allowlist, the orchestrator automatically falls back to a stealthed headless Chromium browser with site-specific CSS extractors
+
+| Module | Primary Source | Fallback Source | Live Data |
+|---|---|---|---|
+| NaukriAlert | Bright Data collector `c_mt5yz...` | sarkariresult.com (Playwright) | ✅ 30 real govt job listings |
+| TenderSentry | Bright Data collector `c_mt0uq...` | — (seeded) | 📋 Tender data |
+| MandiWatch | Bright Data collector `c_mt1h2...` | — (seeded) | 🌾 Mandi prices |
+| CollegeCutoff | Bright Data collector `c_mt1h6...` | — (seeded) | 🎓 Cutoff ranks |
+| StartupPulse | Bright Data collector `c_mt1hc...` | gktoday.in (Playwright) | ✅ 20 real current affairs |
+
+The orchestrator tries Bright Data first, and if it fails (403, timeout, empty output), it transparently falls back to the Playwright scraper — **the dashboard and API never know the difference**.
+
 ---
 
 ## Tracks Entered
@@ -54,6 +71,7 @@ Each module has:
 ## Tech Stack
 
 - **Bright Data Scraper Studio** — `@brightdata/cli` for `create`, `run`, and `heal`
+- **Playwright + Stealth** — fallback scraper for domains where Bright Data's proxy returns 403 or the domain isn't on the account allowlist; site-specific extractors for sarkariresult.com, freejobalert.com, gktoday.in
 - **Python + FastAPI** — orchestration, diff engine, storage API
 - **SQLite** — lightweight snapshot + change tracking
 - **Next.js + Tailwind + shadcn/ui** — dashboard
