@@ -64,43 +64,69 @@ def parse_output(data: Any) -> List[Dict[str, Any]]:
 
 def run_source(source: Source, db, auto_heal: bool = True) -> Dict[str, Any]:
     result = {"success": False, "items": [], "error": None}
-    schema = load_module_schema(source.module)
+
+    # ── Layer 0: Bright Data multi-product scraper (Scraper Studio + Web Unlocker + SERP + Discover) ──
     try:
-        data = trigger_collector(source.collector_id, source.url)
-        items = parse_output(data)
-        items = [flatten_item(item) for item in items]
-        if items and schema:
-            sample = schema.model_json_schema().get("properties", {})
-            ok, valid = validate_items(items, sample)
-            if ok:
-                result["success"] = True
-                result["items"] = valid
-                snapshot_hash = compute_hash(valid)
-                snapshot = Snapshot(source_id=source.id, raw_json=valid, hash=snapshot_hash, status="ok")
-                db.add(snapshot)
+        from bharatwatch.core.brightdata_scrape import scrape_module as bd_scrape
+        bd_result = bd_scrape(source.module)
+        if bd_result["ok"] and bd_result["items"]:
+            items = bd_result["items"]
+            result["items"] = items
+            result["success"] = True
+            result["fallback"] = "brightdata_multi"
+            snapshot_hash = compute_hash(items)
+            snapshot = Snapshot(source_id=source.id, raw_json=items, hash=snapshot_hash, status="ok")
+            db.add(snapshot)
+            db.commit()
+            last = db.query(Snapshot).filter_by(source_id=source.id).order_by(Snapshot.captured_at.desc()).offset(1).first()
+            if last:
+                key_fields = MODULE_KEY_FIELDS.get(source.module, ["title"])
+                changes = compute_diff(last.raw_json, items, key_fields)
+                for c in changes:
+                    db.add(Change(source_id=source.id, change_type=c["change_type"], before=c["before"], after=c["after"]))
                 db.commit()
-
-                last = db.query(Snapshot).filter_by(source_id=source.id).order_by(Snapshot.captured_at.desc()).offset(1).first()
-                if last:
-                    key_fields = MODULE_KEY_FIELDS.get(source.module, ["title"])
-                    changes = compute_diff(last.raw_json, valid, key_fields)
-                    for c in changes:
-                        db.add(Change(source_id=source.id, change_type=c["change_type"], before=c["before"], after=c["after"]))
-                    db.commit()
-
-                source.health = "healthy"
-            else:
-                result["error"] = "schema validation failed"
-                source.health = "broken"
-        elif not items:
-            result["error"] = "empty output"
-            source.health = "broken"
-        else:
-            result["error"] = "no schema loaded"
-            source.health = "broken"
+            source.health = "healthy"
     except Exception as e:
-        result["error"] = str(e)
-        source.health = "broken"
+        result["error"] = f"bd_multi: {e}"
+
+    # ── Layer 1: Bright Data Scraper Studio collector (direct CLI run) ──
+    if not result["success"]:
+        schema = load_module_schema(source.module)
+        try:
+            data = trigger_collector(source.collector_id, source.url)
+            items = parse_output(data)
+            items = [flatten_item(item) for item in items]
+            if items and schema:
+                sample = schema.model_json_schema().get("properties", {})
+                ok, valid = validate_items(items, sample)
+                if ok:
+                    result["success"] = True
+                    result["items"] = valid
+                    result["fallback"] = "scraper_studio"
+                    snapshot_hash = compute_hash(valid)
+                    snapshot = Snapshot(source_id=source.id, raw_json=valid, hash=snapshot_hash, status="ok")
+                    db.add(snapshot)
+                    db.commit()
+                    last = db.query(Snapshot).filter_by(source_id=source.id).order_by(Snapshot.captured_at.desc()).offset(1).first()
+                    if last:
+                        key_fields = MODULE_KEY_FIELDS.get(source.module, ["title"])
+                        changes = compute_diff(last.raw_json, valid, key_fields)
+                        for c in changes:
+                            db.add(Change(source_id=source.id, change_type=c["change_type"], before=c["before"], after=c["after"]))
+                        db.commit()
+                    source.health = "healthy"
+                else:
+                    result["error"] = "schema validation failed"
+                    source.health = "broken"
+            elif not items:
+                result["error"] = "empty output"
+                source.health = "broken"
+            else:
+                result["error"] = "no schema loaded"
+                source.health = "broken"
+        except Exception as e:
+            result["error"] = str(e)
+            source.health = "broken"
 
     # ── Layer 2: Bright Data Web Unlocker Direct API fallback ──
     if not result["success"]:

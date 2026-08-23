@@ -129,11 +129,12 @@ The collector ID stays the same; downstream code, the API, and the dashboard nev
 ## Tracks Entered
 
 ### 🕸️ Web-Slinger (Best Use of Bright Data)
-- **4 Bright Data products used**: Scraper Studio, Web Unlocker API, Scraping Browser, SERP API
+- **5 Bright Data products used**: Scraper Studio, Web Unlocker, SERP API, Discover, Scraping Browser
 - 5 custom AI-generated Scraper Studio collectors (`scraper create` → `scraper run` → `scraper heal`)
-- Web Unlocker Direct API as Layer 2 — 122 real govt job listings scraped via REST
-- Scraping Browser (cloud Chrome via CDP) verified working on sarkariresult.com, freejobalert.com, gktoday.in
-- SERP API verified — 120 search results for "ssc recruitment notification 2026"
+- Web Unlocker as Layer 0-2 — fetches any non-blocked URL as clean markdown (`bdata scrape`)
+- SERP API for tender/mandi discovery — finds accessible mirror sites
+- Discover for AI-ranked govt job results with intent matching
+- Scraping Browser (cloud Chrome via CDP) for JS-rendered pages
 - Context-aware heal prompts with `--auto-approve --auto-save` (closed-loop)
 - Post-heal validation (re-run + verify real data)
 - `watch` daemon for always-on monitoring
