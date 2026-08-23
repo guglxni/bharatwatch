@@ -1,0 +1,20 @@
+# Render blueprint — BharatWatch FastAPI backend
+# Deploy: connect the guglxni/bharatwatch repo in Render; this file auto-provisions the service.
+services:
+  - type: web
+    name: bharatwatch-api
+    runtime: python
+    plan: starter          # Hobby accounts can use `free` — change to `free` to stay on $0
+    region: singapore      # closest to IST
+    branch: main
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash render_start.sh
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: DATABASE_URL
+        value: sqlite:////opt/render/project/src/storage.db
+      - key: CORS_ORIGINS
+        value: "*"
