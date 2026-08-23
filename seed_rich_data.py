@@ -4,12 +4,15 @@ Rich seed for BharatWatch demo: realistic live data for all 5 modules,
 Run: .venv/bin/python seed_rich_data.py
 """
 import sys
+import os
 import json
 import hashlib
 import random
 from datetime import datetime, timedelta, timezone
 
-sys.path.insert(0, "bharatwatch")
+# Resolve paths relative to the repo root regardless of cwd (Render runs from repo root).
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(REPO_ROOT, "bharatwatch"))
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.models import Base, Source, Snapshot, Change, HealEvent
@@ -17,7 +20,8 @@ from core.database import init_db
 
 random.seed(42)
 init_db()
-engine = create_engine("sqlite:///storage.db")
+DB_PATH = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(REPO_ROOT, 'storage.db')}")
+engine = create_engine(DB_PATH, connect_args={"check_same_thread": False})
 Session = sessionmaker(bind=engine)
 db = Session()
 
