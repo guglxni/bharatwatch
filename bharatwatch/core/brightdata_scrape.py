@@ -266,67 +266,122 @@ def scrape_tendersentry() -> List[Dict[str, Any]]:
     """TenderSentry: SERP search → web_unlocker_scrape (tenderdetail.com).
 
     Uses BD SERP API to find tender listing sites, then BD Web Unlocker
-    to fetch and extract tender data.
+    to fetch and extract tender data from accessible (non-.gov.in) sites.
     """
     items = []
 
     # Step 1: SERP search to find accessible tender pages
-    serp = serp_search("latest government tenders India 2026", country="in")
+    serp = serp_search("latest government tenders India 2026 site:tenderdetail.com OR site:tendertiger.com OR site:tenderkart.com", country="in")
     accessible_urls = []
     for r in serp.get("results", []):
         link = r.get("link", "")
-        # Skip .gov.in domains (blocked by BD policy)
+        title = r.get("title", "")
+        # Skip .gov.in domains (blocked by BD policy) and JS-only pages
         if ".gov.in" not in link and link.startswith("http"):
-            accessible_urls.append((link, r.get("title", "")))
+            accessible_urls.append((link, title))
 
     # Step 2: Web Unlocker scrape on the best non-govt tender site
-    for url, title in accessible_urls[:3]:
+    for url, title in accessible_urls[:5]:
         result = web_unlocker_scrape(url, "markdown")
         if result["ok"] and result["content"]:
-            # Extract tender-like entries from markdown
+            content = result["content"]
+            # Extract tender-like entries — look for structured lines with tender keywords
+            lines = content.split("\n")
+            for line in lines:
+                line = line.strip().lstrip("|*").rstrip("|*").strip()
+                if len(line) > 15 and any(kw in line.lower() for kw in
+                    ["tender", "bid", "eoi", "rfq", "nit", "auction", "procurement", "supply"]):
+                    # Clean markdown formatting
+                    clean = re.sub(r"[\[\]#*`>]", "", line).strip()
+                    if len(clean) > 15:
+                        items.append({
+                            "tender_id": "",
+                            "title": clean[:200],
+                            "department": "",
+                            "estimated_value": "",
+                            "closing_date": "",
+                            "document_link": url,
+                        })
+                        if len(items) >= 20:
+                            break
+        if items:
+            break
+
+    # Fallback: if SERP didn't find good pages, scrape tenderdetail.com directly
+    if not items:
+        result = web_unlocker_scrape("https://www.tenderdetail.com/Indian-Tenders", "markdown")
+        if result["ok"] and result["content"]:
             lines = result["content"].split("\n")
             for line in lines:
-                line = line.strip()
-                if len(line) > 20 and any(kw in line.lower() for kw in
-                    ["tender", "bid", "eoi", "rfq", "nit", "auction"]):
+                line = line.strip().lstrip("|*").rstrip("|*").strip()
+                clean = re.sub(r"[\[\]#*`>]", "", line).strip()
+                if len(clean) > 15 and any(kw in clean.lower() for kw in
+                    ["tender", "bid", "eoi", "rfq", "nit", "supply", "procurement"]):
                     items.append({
                         "tender_id": "",
-                        "title": line[:200],
+                        "title": clean[:200],
                         "department": "",
                         "estimated_value": "",
                         "closing_date": "",
-                        "document_link": url,
+                        "document_link": "https://www.tenderdetail.com/Indian-Tenders",
                     })
                     if len(items) >= 20:
                         break
-        if items:
-            break
 
     return items[:20]
 
 
 def scrape_mandiwatch() -> List[Dict[str, Any]]:
-    """MandiWatch: SERP search → web_unlocker_scrape (agmarknet mirrors).
+    """MandiWatch: SERP search → web_unlocker_scrape (price news sites).
 
     Agmarknet.gov.in is JS-rendered and BD-blocked. Use SERP to find
-    mirror sites and news sources reporting mandi prices.
+    news sites and aggregators reporting mandi/commodity prices.
     """
     items = []
 
-    serp = serp_search("agmarknet mandi prices today India tomato onion", country="in")
+    serp = serp_search("mandi prices today India commodity agmarknet", country="in")
     for r in serp.get("results", []):
         link = r.get("link", "")
+        title = r.get("title", "")
         if ".gov.in" not in link and link.startswith("http"):
             result = web_unlocker_scrape(link, "markdown")
             if result["ok"] and result["content"]:
-                # Extract price-like data
-                price_lines = re.findall(
-                    r'(\w[\w\s]+)\s*[:\-]\s*[₹]?\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*/?\s*(?:kg|quintal|qtl)?',
+                # Extract price data — look for commodity + price patterns
+                price_patterns = re.findall(
+                    r'([A-Z][a-zA-Z\s]{3,30})\s*[:\-]\s*[₹]?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*/?\s*(?:kg|quintal|qtl|per)?',
                     result["content"],
                 )
-                for name, price in price_lines[:20]:
+                for name, price in price_patterns[:20]:
+                    name = name.strip()
+                    # Skip error messages and non-price text
+                    if price and name and not any(x in name.lower() for x in
+                        ["error", "rejected", "blocked", "response"]):
+                        items.append({
+                            "mandi": name[:100],
+                            "crop": "",
+                            "variety": "",
+                            "min_price": "",
+                            "max_price": "",
+                            "modal_price": price,
+                            "date": "",
+                        })
+            if items:
+                break
+
+    # Fallback: try commoditiesmarket.com or similar
+    if not items:
+        result = web_unlocker_scrape("https://www.commodityonline.com/mandi-prices", "markdown")
+        if result["ok"] and result["content"]:
+            price_patterns = re.findall(
+                r'([A-Z][a-zA-Z\s]{3,30})\s*[:\-]\s*[₹]?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)',
+                result["content"],
+            )
+            for name, price in price_patterns[:20]:
+                name = name.strip()
+                if price and name and not any(x in name.lower() for x in
+                    ["error", "rejected", "blocked"]):
                     items.append({
-                        "mandi": name.strip()[:100],
+                        "mandi": name[:100],
                         "crop": "",
                         "variety": "",
                         "min_price": "",
@@ -334,8 +389,6 @@ def scrape_mandiwatch() -> List[Dict[str, Any]]:
                         "modal_price": price,
                         "date": "",
                     })
-            if items:
-                break
 
     return items[:20]
 
