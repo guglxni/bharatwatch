@@ -332,33 +332,40 @@ def scrape_tendersentry() -> List[Dict[str, Any]]:
 
 
 def scrape_mandiwatch() -> List[Dict[str, Any]]:
-    """MandiWatch: SERP search → web_unlocker_scrape (price news sites).
+    """MandiWatch: Discover → web_unlocker_scrape (news articles with mandi prices).
 
-    Agmarknet.gov.in is JS-rendered and BD-blocked. Use SERP to find
-    news sites and aggregators reporting mandi/commodity prices.
+    Agmarknet.gov.in is JS-rendered and BD-blocked. Use BD Discover to find
+    news articles and reports that quote mandi/commodity prices, then
+    extract price data from the markdown content.
     """
     items = []
 
-    serp = serp_search("mandi prices today India commodity agmarknet", country="in")
-    for r in serp.get("results", []):
+    # Step 1: Use BD Discover (AI-ranked) to find pages with mandi prices
+    disc = discover_search(
+        "mandi prices today India tomato onion wheat commodity",
+        intent="Find pages reporting agricultural commodity mandi prices in India with numeric price data",
+        country="in",
+        num=10,
+    )
+    for r in disc.get("results", []):
         link = r.get("link", "")
-        title = r.get("title", "")
         if ".gov.in" not in link and link.startswith("http"):
+            # Step 2: Web Unlocker scrape the page
             result = web_unlocker_scrape(link, "markdown")
             if result["ok"] and result["content"]:
-                # Extract price data — look for commodity + price patterns
+                # Extract commodity + price patterns from markdown
+                # Look for patterns like "Tomato: ₹1200/quintal" or "Onion - 800 per kg"
                 price_patterns = re.findall(
-                    r'([A-Z][a-zA-Z\s]{3,30})\s*[:\-]\s*[₹]?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*/?\s*(?:kg|quintal|qtl|per)?',
+                    r'([A-Z][a-zA-Z\s]{3,30})\s*[:\-]\s*[₹]?\s*(\d{1,2}(?:,\d{3})*(?:\.\d{1,2})?)\s*/?\s*(?:kg|quintal|qtl|per|ton)?',
                     result["content"],
                 )
                 for name, price in price_patterns[:20]:
                     name = name.strip()
-                    # Skip error messages and non-price text
                     if price and name and not any(x in name.lower() for x in
-                        ["error", "rejected", "blocked", "response"]):
+                        ["error", "rejected", "blocked", "response", "cookie", "javascript", "enable"]):
                         items.append({
                             "mandi": name[:100],
-                            "crop": "",
+                            "crop": name.strip()[:50],
                             "variety": "",
                             "min_price": "",
                             "max_price": "",
@@ -368,27 +375,40 @@ def scrape_mandiwatch() -> List[Dict[str, Any]]:
             if items:
                 break
 
-    # Fallback: try commoditiesmarket.com or similar
+    # Fallback: try known commodity price sites
     if not items:
-        result = web_unlocker_scrape("https://www.commodityonline.com/mandi-prices", "markdown")
-        if result["ok"] and result["content"]:
-            price_patterns = re.findall(
-                r'([A-Z][a-zA-Z\s]{3,30})\s*[:\-]\s*[₹]?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)',
-                result["content"],
-            )
-            for name, price in price_patterns[:20]:
-                name = name.strip()
-                if price and name and not any(x in name.lower() for x in
-                    ["error", "rejected", "blocked"]):
-                    items.append({
-                        "mandi": name[:100],
-                        "crop": "",
-                        "variety": "",
-                        "min_price": "",
-                        "max_price": "",
-                        "modal_price": price,
-                        "date": "",
-                    })
+        for url in [
+            "https://www.commodityonline.com/mandiprices",
+            "https://www.agriwatch.com/",
+        ]:
+            result = web_unlocker_scrape(url, "markdown")
+            if result["ok"] and result["content"]:
+                # Broader pattern — any line with a commodity name and a number
+                lines = result["content"].split("\n")
+                for line in lines:
+                    line = line.strip().lstrip("|*").rstrip("|*").strip()
+                    # Match "Commodity Name ... ₹1234" or "Name: 1234/kg"
+                    m = re.search(
+                        r'([A-Z][a-zA-Z\s]{3,30}).*?[₹]?\s*(\d{2,5}(?:,\d{3})*(?:\.\d+)?)\s*/?\s*(?:kg|qtl|quintal|ton)?',
+                        line,
+                    )
+                    if m:
+                        name, price = m.group(1).strip(), m.group(2)
+                        if not any(x in name.lower() for x in
+                            ["error", "rejected", "blocked", "cookie", "javascript", "price updated"]):
+                            items.append({
+                                "mandi": name[:100],
+                                "crop": name[:50],
+                                "variety": "",
+                                "min_price": "",
+                                "max_price": "",
+                                "modal_price": price,
+                                "date": "",
+                            })
+                            if len(items) >= 20:
+                                break
+            if items:
+                break
 
     return items[:20]
 
