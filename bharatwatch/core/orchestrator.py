@@ -102,7 +102,42 @@ def run_source(source: Source, db, auto_heal: bool = True) -> Dict[str, Any]:
         result["error"] = str(e)
         source.health = "broken"
 
-    # ── Fallback: if Bright Data fails, try the direct Playwright scraper ──
+    # ── Layer 2: Bright Data Web Unlocker Direct API fallback ──
+    if not result["success"]:
+        try:
+            from bharatwatch.core.direct_scraper import scrape_with_brightdata_unlocker
+            from bharatwatch.core.site_extractors import get_site_extractor
+            # Try the source URL first, then fallback site URLs
+            unlocker_urls = [source.url]
+            for site_url, _ in get_site_extractor(source.module):
+                if site_url not in unlocker_urls:
+                    unlocker_urls.append(site_url)
+            for try_url in unlocker_urls:
+                unlocker_result = scrape_with_brightdata_unlocker(try_url, source.module)
+                if unlocker_result["ok"] and unlocker_result["items"]:
+                    items = unlocker_result["items"]
+                    result["items"] = items
+                    result["success"] = True
+                    result["error"] = None
+                    result["fallback"] = "brightdata_unlocker"
+                    result["unlocker_url"] = try_url
+                    snapshot_hash = compute_hash(items)
+                    snapshot = Snapshot(source_id=source.id, raw_json=items, hash=snapshot_hash, status="ok")
+                    db.add(snapshot)
+                    db.commit()
+                    last = db.query(Snapshot).filter_by(source_id=source.id).order_by(Snapshot.captured_at.desc()).offset(1).first()
+                    if last:
+                        key_fields = MODULE_KEY_FIELDS.get(source.module, ["title"])
+                        changes = compute_diff(last.raw_json, items, key_fields)
+                        for c in changes:
+                            db.add(Change(source_id=source.id, change_type=c["change_type"], before=c["before"], after=c["after"]))
+                        db.commit()
+                    source.health = "healthy"
+                    break
+        except Exception as ue:
+            result["unlocker_error"] = str(ue)
+
+    # ── Layer 3: Playwright + Stealth fallback ──
     if not result["success"]:
         try:
             from bharatwatch.core.direct_scraper import scrape_with_playwright

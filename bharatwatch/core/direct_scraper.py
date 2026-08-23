@@ -267,7 +267,7 @@ def scrape_with_brightdata_unlocker(url: str, module: str) -> Dict[str, Any]:
 
     This is the cleanest fix for "tunneling socket could not be established" —
     it makes a REST call instead of a proxy tunnel, so the 403 never happens.
-    Returns HTML that we then parse with the same extractors.
+    Returns HTML that we then parse with site-specific link extractors.
     """
     import os
     import subprocess
@@ -280,7 +280,7 @@ def scrape_with_brightdata_unlocker(url: str, module: str) -> Dict[str, Any]:
     api_key = ""
     try:
         with open(cred_path) as f:
-            api_key = _json.load(f).get("api", {}).get("key", "")
+            api_key = _json.load(f).get("api_key", "")
     except Exception:
         pass
 
@@ -309,31 +309,98 @@ def scrape_with_brightdata_unlocker(url: str, module: str) -> Dict[str, Any]:
             result["error"] = f"unlocker returned empty (exit {proc.returncode})"
             return result
 
-        # Parse the HTML using the same site-specific extractors
-        # We need a page-like object — use a simple regex-based parser
-        rules = EXTRACTION_RULES.get(module, {})
-        selectors = rules.get("selectors", {})
-        item_sel = selectors.get("item", "")
+        # Extract links based on the domain
+        items: List[Dict[str, Any]] = []
 
-        if "tr" in item_sel:
+        if "sarkariresult.com" in url:
+            # Sarkariresult: job links are in /2026/ or /2025/ paths
+            links = re.findall(
+                r'<a[^>]*href="(https://www\.sarkariresult\.com/20[0-9]+/[^"]+)"[^>]*>([^<]{10,120})</a>',
+                html, re.IGNORECASE,
+            )
+            seen = set()
+            for href, text in links:
+                text = re.sub(r"\s+", " ", text).replace("\xa0", " ").strip()
+                if href not in seen and text and not any(x in text.lower() for x in
+                    ["instagram", "facebook", "youtube", "telegram"]):
+                    seen.add(href)
+                    items.append({
+                        "title": text[:200],
+                        "department": "",
+                        "notification_date": "",
+                        "official_link": href,
+                        "number_of_vacancies": "",
+                        "qualification_required": "",
+                        "last_application_date": "",
+                        "exam_date": "",
+                    })
+
+        elif "freejobalert.com" in url:
+            links = re.findall(
+                r'<a[^>]*href="(https://www\.freejobalert\.com/[^"]+)"[^>]*>([^<]{10,120})</a>',
+                html, re.IGNORECASE,
+            )
+            seen = set()
+            for href, text in links:
+                text = re.sub(r"\s+", " ", text).strip()
+                if href not in seen and text and not any(x in text.lower() for x in
+                    ["download", "app", "instagram", "facebook"]):
+                    seen.add(href)
+                    items.append({
+                        "title": text[:200],
+                        "department": "",
+                        "notification_date": "",
+                        "official_link": href,
+                        "number_of_vacancies": "",
+                        "qualification_required": "",
+                        "last_application_date": "",
+                        "exam_date": "",
+                    })
+
+        elif "gktoday.in" in url:
+            links = re.findall(
+                r'<a[^>]*href="(https://www\.gktoday\.in/[^"]+)"[^>]*>([^<]{10,150})</a>',
+                html, re.IGNORECASE,
+            )
+            seen = set()
+            for href, text in links:
+                text = re.sub(r"\s+", " ", text).strip()
+                if href not in seen and text and not any(x in text.lower() for x in
+                    ["login", "register", "account", "quiz", "book"]):
+                    seen.add(href)
+                    items.append({
+                        "title": text[:200],
+                        "ministry": "",
+                        "description": "",
+                        "official_link": href,
+                    })
+
+        elif "josaa.nic.in" in url:
+            # JoSAA cutoffs — try table extraction
             rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL | re.IGNORECASE)
             for row in rows[:50]:
                 cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.DOTALL | re.IGNORECASE)
                 cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
-                if len(cells) >= 3:
-                    item = {f"col_{i}": c[:300] for i, c in enumerate(cells)}
-                    item["_source_url"] = url
-                    result["items"].append(item)
+                if len(cells) >= 4:
+                    items.append({
+                        "institute": cells[0][:200],
+                        "branch": cells[1][:100] if len(cells) > 1 else "",
+                        "round": cells[2][:50] if len(cells) > 2 else "",
+                        "opening_rank": cells[3][:20] if len(cells) > 3 else "",
+                        "closing_rank": cells[4][:20] if len(cells) > 4 else "",
+                    })
 
-        # Also try extracting links
-        if not result["items"]:
-            links = re.findall(r'<a[^>]*href="([^"]*)"[^>]*>([^<]{10,120})</a>', html, re.IGNORECASE)
+        else:
+            # Generic: extract all meaningful links
+            links = re.findall(r'<a[^>]*href="([^"]+)"[^>]*>([^<]{10,120})</a>', html, re.IGNORECASE)
             for href, text in links[:30]:
                 text = re.sub(r"\s+", " ", text).strip()
-                if text and not any(x in text.lower() for x in ["login", "register", "home", "about"]):
-                    result["items"].append({"title": text[:200], "official_link": href[:200], "_source_url": url})
+                if text and not any(x in text.lower() for x in
+                    ["login", "register", "home", "about", "contact", "privacy"]):
+                    items.append({"title": text[:200], "official_link": href[:200], "_source_url": url})
 
-        result["count"] = len(result["items"])
+        result["items"] = items
+        result["count"] = len(items)
         result["ok"] = result["count"] > 0
         if not result["ok"]:
             result["error"] = "no items extracted from unlocker HTML"
