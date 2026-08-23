@@ -32,7 +32,7 @@ def now():
 
 # ---------------------------------------------------------------- collectors
 COLLECTORS = {
-    "nauktrialert": "c_mt5yz3z91f5nm13h9x",
+    "nauktrialert": "c_mt68v2iy2ox6e40ddp",
     "tendersentry": "c_mt0uqsr9275nljkmec",
     "mandiwatch": "c_mt1h2pqy2fdtlurkwq",
     "collegecutoff": "c_mt1h6w0ukc2lut11g",
@@ -40,7 +40,7 @@ COLLECTORS = {
 }
 
 SOURCES_META = {
-    "nauktrialert": ("Sarkari Result — Latest Govt Jobs", "https://www.sarkariresult.com/"),
+    "nauktrialert": ("Indeed — Government Jobs India", "https://www.indeed.com/jobs?q=government&l=India"),
     "tendersentry": ("GeM + CPPP Government Tenders", "https://www.gem.gov.in/"),
     "mandiwatch": ("Agmarknet Mandi Prices", "https://agmarknet.gov.in/"),
     "collegecutoff": ("JoSAA Cutoff Ranks", "https://josaa.nic.in/"),

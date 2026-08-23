@@ -29,7 +29,7 @@ BharatWatch uses a **dual-source scraping architecture**:
 
 | Module | Primary Source | Fallback Source | Live Data |
 |---|---|---|---|
-| NaukriAlert | Bright Data collector `c_mt5yz...` | sarkariresult.com (Playwright) | ✅ 30 real govt job listings |
+| NaukriAlert | Bright Data collector `c_mt68v...` (Indeed.com) | sarkariresult.com (Playwright) | ✅ 30 real govt job listings |
 | TenderSentry | Bright Data collector `c_mt0uq...` | — (seeded) | 📋 Tender data |
 | MandiWatch | Bright Data collector `c_mt1h2...` | — (seeded) | 🌾 Mandi prices |
 | CollegeCutoff | Bright Data collector `c_mt1h6...` | — (seeded) | 🎓 Cutoff ranks |

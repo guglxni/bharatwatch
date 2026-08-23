@@ -23,7 +23,7 @@ MODULE_META = {
         "tagline": "Govt job notifications, the moment they drop",
         "icon": "🔔",
         "accent": "from-orange-500 to-amber-500",
-        "source_name": "SarkariResult.com + FreeJobAlert.com",
+        "source_name": "Indeed.com — Government Jobs India",
     },
     "tendersentry": {
         "label": "TenderSentry",
