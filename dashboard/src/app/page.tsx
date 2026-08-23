@@ -13,7 +13,7 @@ import { fetchOverview, fetchHealEvents } from "@/lib/api";
 
 export default async function LandingPage() {
   let overview = null;
-  let heals: unknown[] = [];
+  let heals: Awaited<ReturnType<typeof fetchHealEvents>> = [];
   try {
     [overview, heals] = await Promise.all([fetchOverview(), fetchHealEvents()]);
   } catch {
