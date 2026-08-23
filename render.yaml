@@ -4,9 +4,10 @@ services:
   - type: web
     name: bharatwatch-api
     runtime: python
-    plan: starter          # Hobby accounts can use `free` — change to `free` to stay on $0
-    region: singapore      # closest to IST
+    plan: free
+    region: singapore
     branch: main
+    repo: https://github.com/guglxni/bharatwatch
     rootDir: .
     buildCommand: pip install -r requirements.txt
     startCommand: bash render_start.sh
