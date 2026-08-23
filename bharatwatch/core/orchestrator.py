@@ -101,6 +101,37 @@ def run_source(source: Source, db, auto_heal: bool = True) -> Dict[str, Any]:
     except Exception as e:
         result["error"] = str(e)
         source.health = "broken"
+
+    # ── Fallback: if Bright Data fails, try the direct Playwright scraper ──
+    if not result["success"]:
+        try:
+            from bharatwatch.core.direct_scraper import scrape_with_playwright
+            from bharatwatch.core.site_extractors import get_site_extractor
+            # Use the primary site URL for this module
+            sites = get_site_extractor(source.module)
+            fallback_url = sites[0][0] if sites else source.url
+            pw_result = scrape_with_playwright(fallback_url, source.module)
+            if pw_result["ok"] and pw_result["items"]:
+                items = pw_result["items"]
+                result["items"] = items
+                result["success"] = True
+                result["error"] = None
+                result["fallback"] = "playwright"
+                snapshot_hash = compute_hash(items)
+                snapshot = Snapshot(source_id=source.id, raw_json=items, hash=snapshot_hash, status="ok")
+                db.add(snapshot)
+                db.commit()
+                last = db.query(Snapshot).filter_by(source_id=source.id).order_by(Snapshot.captured_at.desc()).offset(1).first()
+                if last:
+                    key_fields = MODULE_KEY_FIELDS.get(source.module, ["title"])
+                    changes = compute_diff(last.raw_json, items, key_fields)
+                    for c in changes:
+                        db.add(Change(source_id=source.id, change_type=c["change_type"], before=c["before"], after=c["after"]))
+                    db.commit()
+                source.health = "healthy"
+        except Exception as fe:
+            result["fallback_error"] = str(fe)
+
     source.last_run_at = datetime.utcnow()
     db.commit()
 
