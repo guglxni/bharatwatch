@@ -13,6 +13,7 @@ Built for the **WeMakeDevs × Bright Data "Into the Scrape-Verse"** hackathon, A
 | **API (Render)** | https://bharatwatch-api.onrender.com |
 | API health | https://bharatwatch-api.onrender.com/api/v1/health |
 | API overview | https://bharatwatch-api.onrender.com/api/v1/overview |
+| **Source code** | https://github.com/guglxni/bharatwatch |
 
 **Stack:** Next.js 16 dashboard on **Vercel** · FastAPI + SQLite backend on **Render** · Bright Data Scraper Studio collectors.
 
