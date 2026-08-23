@@ -59,8 +59,8 @@ export function BlurIn({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, filter: "blur(10px)", y: 12 }}
-      animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+      initial={{ opacity: 0, scale: 0.98, y: 12 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.7, delay, ease: [0.21, 0.47, 0.32, 0.98] }}
       className={className}
     >
