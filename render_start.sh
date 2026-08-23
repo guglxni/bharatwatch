@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # BharatWatch — Render production start
-# Seeds the DB if empty, installs Playwright browsers, then serves the FastAPI app.
+# Seeds the DB if empty, then serves the FastAPI app on Render's $PORT.
 set -e
 
 echo "[render_start] seeding database if needed..."
@@ -10,10 +10,6 @@ python -m bharatwatch.cli init_db || true
 if [ -f seed_rich_data.py ]; then
   python seed_rich_data.py || echo "[render_start] seed_rich_data skipped"
 fi
-
-# Install Playwright Chromium for the direct scraper fallback
-echo "[render_start] installing Playwright Chromium..."
-python -m playwright install chromium --with-deps 2>/dev/null || python -m playwright install chromium 2>/dev/null || echo "[render_start] Playwright install skipped"
 
 PORT="${PORT:-8000}"
 echo "[render_start] starting uvicorn on 0.0.0.0:${PORT}"
