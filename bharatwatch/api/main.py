@@ -23,7 +23,7 @@ MODULE_META = {
         "tagline": "Govt job notifications, the moment they drop",
         "icon": "🔔",
         "accent": "from-orange-500 to-amber-500",
-        "source_name": "SSC / UPSC / IBPS notifications",
+        "source_name": "SarkariResult.com + FreeJobAlert.com",
     },
     "tendersentry": {
         "label": "TenderSentry",
@@ -51,7 +51,7 @@ MODULE_META = {
         "tagline": "Schemes & grants for Indian startups",
         "icon": "🚀",
         "accent": "from-pink-500 to-rose-500",
-        "source_name": "Startup India / ministry portals",
+        "source_name": "GKToday.in + Startup India portals",
     },
 }
 
@@ -97,6 +97,7 @@ def modules():
                 "icon": meta.get("icon", ""),
                 "accent": meta.get("accent", ""),
                 "source_name": meta.get("source_name", ""),
+                "source_url": src.url if src else "",
                 "collector_id": src.collector_id if src else None,
                 "health": src.health if src else "unknown",
                 "item_count": len(snap.raw_json) if snap and isinstance(snap.raw_json, list) else 0,

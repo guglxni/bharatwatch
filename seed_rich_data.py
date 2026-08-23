@@ -40,11 +40,11 @@ COLLECTORS = {
 }
 
 SOURCES_META = {
-    "nauktrialert": ("SSC / UPSC Job Notifications", "https://guglxni.github.io/bharatwatch/demo-sites/naukri/"),
-    "tendersentry": ("GeM + CPPP Government Tenders", "https://guglxni.github.io/bharatwatch/demo-sites/tender/"),
-    "mandiwatch": ("Agmarknet Mandi Prices", "https://guglxni.github.io/bharatwatch/demo-sites/mandi/"),
-    "collegecutoff": ("JoSAA Cutoff Ranks", "https://guglxni.github.io/bharatwatch/demo-sites/cutoff/"),
-    "startuppulse": ("Startup India Schemes", "https://guglxni.github.io/bharatwatch/demo-sites/startup/"),
+    "nauktrialert": ("Sarkari Result — Latest Govt Jobs", "https://www.sarkariresult.com/"),
+    "tendersentry": ("GeM + CPPP Government Tenders", "https://www.gem.gov.in/"),
+    "mandiwatch": ("Agmarknet Mandi Prices", "https://agmarknet.gov.in/"),
+    "collegecutoff": ("JoSAA Cutoff Ranks", "https://josaa.nic.in/"),
+    "startuppulse": ("GKToday — Current Affairs & Schemes", "https://www.gktoday.in/current-affairs/"),
 }
 
 
